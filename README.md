@@ -152,8 +152,7 @@ python trace.py serve --port 8848
 ## 从源码运行
 
 ```bash
-# 仓库地址建成后改成你自己的
-git clone https://github.com/YOUR-NAME/image-trace.git
+git clone https://github.com/yxj1104/image-trace.git
 cd image-trace
 
 pip install -r requirements.txt
