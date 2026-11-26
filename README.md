@@ -152,7 +152,8 @@ python trace.py serve --port 8848
 ## 从源码运行
 
 ```bash
-git clone https://github.com/<owner>/image-trace.git
+# 仓库地址建成后改成你自己的
+git clone https://github.com/YOUR-NAME/image-trace.git
 cd image-trace
 
 pip install -r requirements.txt
@@ -170,10 +171,18 @@ python trace.py serve
 ```bash
 pip install pyinstaller
 python -m PyInstaller build.spec --noconfirm
-python tools/collect_licenses.py     # 收集第三方许可证到产物里
+python tools/collect_licenses.py                     # 收集第三方许可证
+python tools/make_release.py --version 1.0.0         # 生成三个 zip + 校验和
 ```
 
-产物在 `dist/溯源/`。`.gitignore` 已排除 `dist/`，别把打包结果提交进仓库。
+产物在 `dist/溯源/`，发布包默认也写在 `dist/`。`.gitignore` 已排除
+`dist/`，别把打包结果提交进仓库。
+
+盘空间紧张时把 zip 输出到别处（打包峰值需要约 900MB）：
+
+```bash
+python tools/make_release.py --version 1.0.0 --out C:/release
+```
 
 ---
 
