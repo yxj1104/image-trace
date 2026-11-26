@@ -1913,7 +1913,6 @@
 }
 
 /* ---- 图中文搜索的范围选择 ---- */
-
 .ocr-drives {
   display: flex;
   flex-direction: column;
@@ -2133,4 +2132,18 @@
   max-width: 460px;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* 空态与说明文字里的行内代码（文件名、路径）。
+   不用浏览器默认的等宽样式 —— 默认是 Courier，中文环境下很难看，
+   而且默认没有背景色，和正文混在一起。 */
+.empty-desc code,
+.empty code {
+  font-family: var(--font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+  font-size: 0.94em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-sunken);
+  color: var(--text-2);
+  white-space: nowrap;
 }

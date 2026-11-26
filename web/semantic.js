@@ -95,11 +95,18 @@ function showSemanticSetup(st) {
   empty.style.display = '';
 
   if (!st || !st.available) {
+    // 模型缺失有三种可能：下了 lite 版、源码运行时忘了放模型、
+    // 文件损坏。文案要覆盖这三种，并给出可执行的下一步 ——
+    // 开源版不能写「联系维护者」，用户联系不到人。
     empty.innerHTML = `
       <div class="empty-icon">!</div>
       <div class="empty-title">画面搜索不可用</div>
-      <div class="empty-desc">缺少模型文件 models/cn_clip.onnx<br>
-        重新安装或联系维护者</div>`;
+      <div class="empty-desc small">
+        缺少模型文件 <code>models/cn_clip.onnx</code>（182MB）。<br>
+        如果你下的是 lite 版，这个功能本来就不包含；<br>
+        如果是完整版，模型可能没解压完整。<br>
+        源码运行的话，见 <code>models/README.md</code> 获取模型。
+      </div>`;
     return;
   }
 
