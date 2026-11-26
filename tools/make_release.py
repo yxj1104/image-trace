@@ -59,6 +59,11 @@ def zip_filtered(src, dst, name, skip_model=None, extra_files=None):
     实测在只剩 1.5MB 的盘上直接 OSError。
     边走边压只需「产物 + zip」，省掉一整份副本。
     """
+    # extra_files 会覆盖的那些文件名，遍历时要跳过 ——
+    # 否则同一个文件在 zip 里出现两次（实测：手动往 dist 里放过
+    # 启动说明.txt，再跑脚本就重复了）
+    extra_names = {arc for _p, arc in (extra_files or [])}
+
     n = 0
     with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for root, dirs, files in os.walk(src):
@@ -67,6 +72,8 @@ def zip_filtered(src, dst, name, skip_model=None, extra_files=None):
             for f in files:
                 if f in SKIP_FILES or f == skip_model:
                     continue
+                if root == src and f in extra_names:
+                    continue        # 用 extra_files 里的版本
                 p = os.path.join(root, f)
                 rel = os.path.relpath(p, src)
                 z.write(p, os.path.join(name, rel))
