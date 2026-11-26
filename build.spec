@@ -20,6 +20,10 @@ datas = [
     (os.path.join(ROOT, 'assets'), 'assets'),
 ]
 
+# 注意：PyInstaller 6 的 onedir 模式会把 datas 全放进 _internal/，
+# 没法放到产物根目录。所以「启动说明.txt」不在这里处理 ——
+# 由 tools/make_release.py 在打包后复制到 exe 旁边。
+
 # 画面语义搜索的模型（中文 CLIP，182MB）。只打包实际用到的两个文件，
 # 不要整目录拷 —— 开发过程中试过英文 CLIP，那 577MB 的模型放在
 # models/ 下但不该进安装包。
