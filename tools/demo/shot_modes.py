@@ -2,7 +2,7 @@
 
 需要先跑 tools/demo/make_files.py 造数据并启动服务：
 
-    python trace.py --db D:/_demo/data/index.db serve --port 8851
+    python trace.py --db D:/作品集/_data/index.db serve --port 8851
 
 路径按需改 URL / OUT 两行即可。
 """

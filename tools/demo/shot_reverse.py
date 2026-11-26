@@ -2,7 +2,7 @@
 
 需要先跑 tools/demo/make_files.py 造数据并启动服务：
 
-    python trace.py --db D:/_demo/data/index.db serve --port 8851
+    python trace.py --db D:/作品集/_data/index.db serve --port 8851
 
 路径按需改 URL / OUT 两行即可。
 """
@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright
 
 URL = 'http://127.0.0.1:8851/'
 OUT = r'D:\figma\agent\image-trace\docs\images'
-TARGET = r'D:\_demo\files\产品海报\火锅季套餐.jpg'
+TARGET = r'D:\作品集\2026案例\产品海报\火锅季套餐.jpg'
 
 os.makedirs(OUT, exist_ok=True)
 
