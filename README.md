@@ -3,6 +3,10 @@
 Drag an exported image in, find the PSD / AI / CDR source file it came from.
 Runs fully offline. No uploads, no telemetry, no account.
 
+<p align="center">
+  <img src="docs/images/02-reverse.png" alt="以图搜图：拖入导出图，直接给出它的 PSD" width="900">
+</p>
+
 > 中文详细文档在下方，英文只是摘要，方便非中文用户判断这个工具是否合用。
 > The English section is a summary. Full documentation below is in Chinese.
 
@@ -130,7 +134,24 @@ no GPL/AGPL. See [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
 图上文字和画面搜索是两条独立通道，各自的索引单独建、单独补。
 顶栏的「文字索引」按钮随时能看到进度、加范围、暂停。
 
+## 界面
+
+<p align="center">
+  <img src="docs/images/01-browse.png" alt="浏览全部文件" width="900">
+</p>
+
+三栏：左侧筛选，中间结果，右侧详情。所有控件自绘，不含任何原生控件。
+
 ### 以图搜图
+
+把图拖进来，直接给出源文件：
+
+<p align="center">
+  <img src="docs/images/02-reverse.png" alt="以图搜图结果" width="900">
+</p>
+
+查询是左下那张导出图，右侧详情显示「缩略图指纹距离 0/64、ORB 特征匹配 96.6%」，
+并列出「同一画面的其他文件」—— 直接就是它的 PSD。
 
 四路信号叠加：内嵌缩略图 → pHash 一级召回 → ORB 二级重排 → 旋转校正。
 
@@ -144,9 +165,25 @@ no GPL/AGPL. See [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
 | 手机截图带边框 | 1/10 | 3/10 |
 | 重新压缩 | 9/10 | 10/10 |
 
-### 界面
+### 图上文字：记住图里印的字，但忘了文件名
 
-三栏：左侧筛选，中间结果，右侧详情。
+<p align="center">
+  <img src="docs/images/03-ocr.png" alt="图中文搜索" width="900">
+</p>
+
+OCR 结果存在索引里，所以搜「火锅」是查缓存而不是现场识别 —— 全库 31.7 万段
+文字，95 毫秒返回。卡片副标题会显示命中的是哪一段。
+
+### 画面内容：只记得画面长什么样
+
+<p align="center">
+  <img src="docs/images/04-scene.png" alt="画面语义搜索" width="900">
+</p>
+
+中文 CLIP 把图和词都编码成 512 维向量。搜「红色喜庆的海报」能命中春节主视觉，
+不需要图里出现过这些字。
+
+### 其他界面细节
 
 - 筛选：类型 / 格式 / 目录树 / 时间 / 尺寸 / 颜色，全部自绘控件（无原生下拉框、取色器、checkbox）
 - 结果卡片：右上角匹配度徽章，左上角标「源文件」

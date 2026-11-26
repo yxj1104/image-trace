@@ -1630,6 +1630,19 @@ function bindSearch() {
   inp.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      // 图中文 / 画面模式下回车必须走对应的搜索通道。
+      // 原来这里无条件落到 commit()（文件名搜索），所以在「图中文」
+      // 模式里输完词按回车，会跳成文件名搜索 —— 用户看到的是「搜到了
+      // 但没高亮、标题也变了」的错乱状态。防抖跑完再回车才正常，
+      // 这个差别太隐蔽。
+      if (state.searchMode === 'text' || state.searchMode === 'semantic') {
+        clearTimeout(state.qTimer);
+        const v = inp.value.trim();
+        if (state.searchMode === 'text') runTextSearch(v);
+        else runSemanticSearch(v);
+        closePanel();
+        return;
+      }
       if (state.suggestIdx >= 0 && state.suggestItems[state.suggestIdx]) {
         const it = state.suggestItems[state.suggestIdx];
         inp.value = it.text;
