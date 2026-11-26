@@ -21,6 +21,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, 'dist')
 DOC = os.path.join(ROOT, 'docs', '启动说明.txt')
 
+# 发布包的**文件名**用纯 ASCII。中文文件名在浏览器上传时会被
+# GitHub 剥掉（实测 `溯源-1.0.0-win64.zip` 在 Release 页面显示成
+# `-1.0.0-win64.zip`，用户看到只剩个横线）。zip 内部的目录名可以是
+# 中文，那是解压后的文件夹，不受影响。
+SLUG = 'imagetrace'
+
 CLIP_MODEL = 'cn_clip.onnx'
 MODEL_FILES = ('cn_clip.onnx', 'cn_clip_tokenizer.json', 'face_yunet.onnx')
 
@@ -106,7 +112,7 @@ def main():
 
     # ---- 全量包 ----
     print('\n[1/3] 全量包...')
-    zp = os.path.join(out_dir, f'{name}-{args.version}-win64.zip')
+    zp = os.path.join(out_dir, f'{SLUG}-{args.version}-win64.zip')
     n, size = zip_filtered(src, zp, name, extra_files=extra)
     print(f'  {os.path.basename(zp)}: {n} 文件, {size / 2**20:.0f}MB')
     made.append(zp)
@@ -114,7 +120,7 @@ def main():
     # ---- lite 包 ----
     if not args.skip_lite:
         print('\n[2/3] lite 包（剔除 CLIP 模型）...')
-        zp = os.path.join(out_dir, f'{name}-{args.version}-lite.zip')
+        zp = os.path.join(out_dir, f'{SLUG}-{args.version}-lite.zip')
         n, size = zip_filtered(src, zp, name, skip_model=CLIP_MODEL,
                                extra_files=extra)
         print(f'  {os.path.basename(zp)}: {n} 文件, {size / 2**20:.0f}MB')
@@ -128,7 +134,7 @@ def main():
         print(f'  ⚠️ models/ 缺文件: '
               f'{set(MODEL_FILES) - set(avail)}，跳过模型包')
     else:
-        zp = os.path.join(out_dir, f'models-{args.version}.zip')
+        zp = os.path.join(out_dir, f'{SLUG}-models-{args.version}.zip')
         with zipfile.ZipFile(zp, 'w', zipfile.ZIP_DEFLATED,
                              compresslevel=6) as z:
             for f in MODEL_FILES:

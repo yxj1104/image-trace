@@ -1,5 +1,66 @@
 # 溯源 / ImageTrace
 
+Drag an exported image in, find the PSD / AI / CDR source file it came from.
+Runs fully offline. No uploads, no telemetry, no account.
+
+> 中文详细文档在下方，英文只是摘要，方便非中文用户判断这个工具是否合用。
+> The English section is a summary. Full documentation below is in Chinese.
+
+---
+
+## Quick start (English)
+
+**The problem.** A colleague sends you a flattened JPG and asks for a change.
+You need the PSD behind it. The two files live in different folders, with
+different names (`final.psd` exported as `IMG_20240418.jpg`). Duplicate-image
+finders can't help — they match *images*, not *an image and its source*.
+
+**What this does.** It reads inside files: PSD image resource blocks, CDR zip
+thumbnails, AI/PDF page renders, SVG via resvg, Office shell thumbnails.
+So the hits are the **source files themselves**, ranked by visual similarity
+(pHash recall → ORB rerank → rotation correction).
+
+**Requirements**
+
+| | |
+|---|---|
+| OS | Windows 10 1803+ / 11, 64-bit |
+| WebView2 Runtime | Ships with Win11. Win10 may need the [free installer](https://developer.microsoft.com/microsoft-edge/webview2/) |
+| Disk | ~541 MB program + index (≈520 MB for 18k files) |
+
+No Python needed for the prebuilt release.
+
+**Install**
+
+1. Download `imagetrace-x.y.z-win64.zip` from [Releases](../../releases)
+2. Unzip anywhere writable (**not** `C://Program Files`)
+3. Run `溯源.exe`
+4. Gear icon → add folders to index → wait (~20 min for 18k files)
+
+Queries take 100–300 ms afterwards.
+
+**Four search modes**
+
+| Mode | Input | Use when |
+|---|---|---|
+| Filename | type in the top bar | you remember the name |
+| Reverse image | drag & drop or `Ctrl+V` | you only have the image |
+| Text in image | switch to 「图中文」, type | you remember printed text |
+| Scene content | switch to 「画面」, type | you remember what it looks like |
+
+The last two need their own indexes, built separately and resumable.
+
+**Limitations.** Phone screenshots with UI chrome: ~10% hit rate. CLIP scene
+search has no "no match" signal — it will return something even for objects
+not in your library. OCR misses handwriting and heavily stylised display type.
+
+**License.** MIT. Third-party components are MIT / Apache-2.0 / BSD only —
+no GPL/AGPL. See [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
+
+---
+
+## 中文文档
+
 把同事发来的图拖进窗口，找出它的 PSD / AI / CDR 源文件在哪。
 
 纯本地运行，不上传任何文件，不需要联网。
@@ -40,8 +101,8 @@
 
 | 版本 | 大小 | 画面搜索 | 适合 |
 |---|---|---|---|
-| `溯源-x.y.z-win64.zip` | 541MB | 有 | 一般使用，开箱即用 |
-| `溯源-x.y.z-lite.zip` | 360MB | 无 | 只需要「以图搜图」和「图上文字搜索」 |
+| `imagetrace-x.y.z-win64.zip` | 283MB | 有 | 一般使用，开箱即用 |
+| `imagetrace-x.y.z-lite.zip` | 141MB | 无 | 只需要「以图搜图」和「图上文字搜索」 |
 
 「画面搜索」= 用自然语言描述画面内容搜图（输入「海边日落」出海滩照）。
 它需要 182MB 的中文 CLIP 模型，lite 版把这块去掉了。其余功能完全一致。
@@ -158,7 +219,7 @@ cd image-trace
 pip install -r requirements.txt
 
 # 模型需要单独下载（182MB，不进 Git 仓库）
-# 从 Releases 下载 models-x.y.z.zip 解压到 models/，见 models/README.md
+# 从 Releases 下载 imagetrace-models-x.y.z.zip 解压到 models/，见 models/README.md
 
 python trace.py serve
 ```

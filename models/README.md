@@ -15,15 +15,15 @@
 
 **推荐：用 Release 里的完整包**
 
-到 [Releases](../../releases) 下载 `溯源-x.y.z-win64.zip`，解压即用。
+到 [Releases](../../releases) 下载 `imagetrace-x.y.z-win64.zip`，解压即用。
 完整包里已经含全部模型，不需要单独处理。
 
 **仅源码运行：**
 
 ```bash
 # 从 Release 的 assets 单独下载模型包
-# （每个 Release 都附带 models-x.y.z.zip，约 183MB）
-unzip models-x.y.z.zip -d models/
+# （每个 Release 都附带 imagetrace-models-x.y.z.zip，约 142MB）
+unzip imagetrace-models-x.y.z.zip -d models/
 ```
 
 **自己从原始模型导出：**
