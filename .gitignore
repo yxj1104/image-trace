@@ -1,0 +1,51 @@
+# ---- 运行时数据：绝对不能提交 ----
+# data/ 里是本机的索引库（190MB SQLite）和 354MB 缩略图缓存，
+# 还包含用户的绝对路径（D:\workspace\... 这类隐私信息）。
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# 打包产物
+dist/
+build/
+*.spec.bak
+
+# 大模型权重（182MB，走 Release 分发，见 README 的「模型怎么来的」）
+models/*.onnx
+models/*.json
+# models/ 目录本身要保留（放 .gitkeep 与说明）
+!models/README.md
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- 开发调试 ----
+_debug/
+*.log
+srvlog.txt
+_debug_vc_*.png
+_debug_vc_*.json
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---- 打包临时 ----
+_internal/
+*.pyz

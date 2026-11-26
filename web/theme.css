@@ -1,0 +1,128 @@
+:root {
+  --bg: #FFFFFF;
+  --bg-panel: #FAFAF8;
+  --bg-sunken: #F4F3EF;
+  --bg-hover: #F0EFEA;
+  --bg-active: #E8EDEB;
+  --line: #EDEBE6;
+  --line-strong: #D8D5CE;
+  --line-input: #C9C7C0;
+
+  --text: #1F1E1C;
+  --text-2: #6B6963;
+  --text-3: #9C9A93;
+  --text-inv: #FFFFFF;
+
+  --accent: #2F6E5E;
+  --accent-soft: #EAF0EE;
+  --accent-line: #7EA99C;
+  --warn: #A34A3A;
+  --warn-soft: #F8EBE8;
+  --amber: #8A6A2F;
+  --amber-soft: #F7F0E2;
+
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-xl: 14px;
+
+  --fs-xs: 11px;
+  --fs-sm: 11.5px;
+  --fs-md: 12.5px;
+  --fs-lg: 13px;
+  --fs-xl: 15px;
+
+  --h-top: 56px;
+  --w-side: 244px;
+  --w-detail: 344px;
+
+  --shadow-pop: 0 6px 24px rgba(31, 30, 28, .13),
+                0 1px 3px rgba(31, 30, 28, .08);
+  --shadow-card: 0 1px 2px rgba(31, 30, 28, .05);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+               "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB",
+               sans-serif;
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  font-weight: 400;
+}
+
+button, input, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+/* 全局自绘滚动条 */
+.scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  transition: background-color .15s;
+}
+
+.scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.t { color: var(--text); }
+.t2 { color: var(--text-2); }
+.t3 { color: var(--text-3); }
+.mono {
+  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: -.1px;
+}
