@@ -383,7 +383,7 @@ def selftest():
             font = ImageFont.truetype('msyh.ttc', 34)
             im = Image.new('RGB', (460, 90), (255, 255, 255))
             dr = ImageDraw.Draw(im)
-            dr.text((16, 24), '开业庆典 Thailand', fill=(0, 0, 0), font=font)
+            dr.text((16, 24), '开业庆典 2026', fill=(0, 0, 0), font=font)
             res = ocr.recognize(im)
             txt = ' '.join(t for t, _s, _b in res)
         except OSError:

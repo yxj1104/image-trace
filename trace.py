@@ -2,7 +2,7 @@
 """溯源 / ImageTrace — 本地设计文件反向检索。
 
 用法：
-    python trace.py index D:/workspace           建立/更新索引
+    python trace.py index D:/workspace          建立/更新索引
     python trace.py index E: F: G: --jobs 8     多盘并行
     python trace.py find 查询图.jpg              检索
     python trace.py find 查询图.jpg --json       输出 JSON
