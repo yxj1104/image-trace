@@ -1,49 +1,123 @@
+/* ============================================================
+   溯源 v2 — 设计令牌
+   白 / 灰 / 黑。界面本体只有灰阶，颜色只来自内容（缩略图）。
+
+   这个文件只定义变量，不写任何选择器。改主题只改这里。
+   ============================================================ */
+
 :root {
-  --bg: #FFFFFF;
-  --bg-panel: #FAFAF8;
-  --bg-sunken: #F4F3EF;
-  --bg-hover: #F0EFEA;
-  --bg-active: #E8EDEB;
-  --line: #EDEBE6;
-  --line-strong: #D8D5CE;
-  --line-input: #C9C7C0;
+  /* ---- 墨阶：唯一的色相 ---- */
+  --ink:      #0E0E0E;
+  --ink-80:   #3A3A3A;
+  --ink-60:   #6A6A6A;
+  --ink-40:   #9A9A9A;
+  --ink-25:   #C2C2C2;
 
-  --text: #1F1E1C;
-  --text-2: #6B6963;
-  --text-3: #9C9A93;
-  --text-inv: #FFFFFF;
+  /* ---- 面 ---- */
+  --surface:    #FFFFFF;
+  --surface-2:  #F7F7F7;
+  --surface-3:  #F0F0F0;
+  --surface-4:  #E8E8E8;
+  --canvas:     #F2F2F2;   /* 三栏之外的底色 */
 
-  --accent: #2F6E5E;
-  --accent-soft: #EAF0EE;
-  --accent-line: #7EA99C;
-  --warn: #A34A3A;
-  --warn-soft: #F8EBE8;
-  --amber: #8A6A2F;
-  --amber-soft: #F7F0E2;
+  /* ---- 线 ---- */
+  --line:    #ECECEC;
+  --line-2:  #E0E0E0;
+  --line-3:  #D2D2D2;
 
-  --r-sm: 4px;
-  --r-md: 6px;
-  --r-lg: 10px;
-  --r-xl: 14px;
+  /* ---- 圆角 ---- */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+  --r-2xl: 28px;
+  --r-full: 999px;
 
-  --fs-xs: 11px;
-  --fs-sm: 11.5px;
-  --fs-md: 12.5px;
-  --fs-lg: 13px;
-  --fs-xl: 15px;
+  /* ---- 字号：全局只用这 6 级 ---- */
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-15: 15px;
+  --fs-17: 17px;
+  --fs-22: 22px;
 
-  --h-top: 56px;
-  --w-side: 244px;
-  --w-detail: 344px;
+  /* ---- 间距：4 的倍数，6 个档 ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
 
-  --shadow-pop: 0 6px 24px rgba(31, 30, 28, .13),
-                0 1px 3px rgba(31, 30, 28, .08);
-  --shadow-card: 0 1px 2px rgba(31, 30, 28, .05);
+  /* ---- 阴影：极克制，只用来分层，不做装饰 ---- */
+  --sh-1: 0 1px 2px rgba(14, 14, 14, .04);
+  --sh-2: 0 2px 8px rgba(14, 14, 14, .06);
+  --sh-3: 0 8px 32px rgba(14, 14, 14, .10), 0 1px 3px rgba(14, 14, 14, .05);
+  --sh-4: 0 16px 56px rgba(14, 14, 14, .14), 0 2px 6px rgba(14, 14, 14, .06);
+
+  /* ---- 布局尺寸 ---- */
+  --h-top: 64px;
+  --w-side: 272px;
+  --w-detail: 376px;
+  --gap: 12px;
+
+  /* ---- 字体：系统字体栈，不引入 Web Font ---- */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei",
+          "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+  --font-mono: "SF Mono", "Cascadia Mono", Consolas,
+               "Liberation Mono", monospace;
+
+  /* ============================================================
+     兼容层：v1 的变量名继续可用，值映射到 v2 灰阶。
+     目的是让还没重写的样式不会突然丢失颜色而变成黑色默认值。
+     重写 ui.css 后这些别名可以删掉。
+     ============================================================ */
+
+  --bg:           var(--surface);
+  --bg-panel:     var(--surface);      /* 三栏都浮起，不再用次级底色 */
+  --bg-sunken:    var(--surface-2);
+  --bg-hover:     var(--surface-3);
+  --bg-active:    var(--surface-4);
+  --line-strong:  var(--line-2);
+  --line-input:   var(--line-3);
+
+  --text:         var(--ink);
+  --text-2:       var(--ink-80);
+  --text-3:       var(--ink-40);
+  --text-inv:     #FFFFFF;
+
+  --accent:       var(--ink);
+  --accent-soft:  var(--surface-3);
+  --accent-line:  var(--ink-25);
+
+  /* 功能性状态。错误需要可辨识，保留一点红；其余状态一律走灰阶。 */
+  --warn:         #A34A3A;
+  --warn-soft:    #F8EBE8;
+  --amber:        var(--ink-60);
+  --amber-soft:   var(--surface-3);
+
+  --shadow-pop:   var(--sh-3);
+  --shadow-card:  var(--sh-1);
+
+  /* v1 的字号别名 → v2 的 6 级 */
+  --fs-xs: var(--fs-11);
+  --fs-sm: var(--fs-12);
+  --fs-md: var(--fs-13);
+  --fs-lg: var(--fs-15);
+  --fs-xl: var(--fs-17);
 }
+
+/* ============================================================
+   基础
+   ============================================================ */
 
 * {
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html, body {
@@ -54,17 +128,17 @@ html, body {
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-               "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB",
-               sans-serif;
-  font-size: var(--fs-md);
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--fs-13);
   line-height: 1.55;
   font-weight: 400;
+  /* 数字等宽：匹配度 97% 和 8% 右对齐时不左右跳 */
+  font-feature-settings: "tnum" 1;
 }
 
-button, input, textarea {
+button, input, textarea, select {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
@@ -77,12 +151,15 @@ button {
   padding: 0;
 }
 
-/* 全局自绘滚动条 */
+/* ============================================================
+   自绘滚动条：10px 轨道里的 4px 浅灰胶囊，悬停才加深
+   ============================================================ */
+
 .scroll {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-color: var(--line-2) transparent;
 }
 
 .scroll::-webkit-scrollbar {
@@ -95,21 +172,21 @@ button {
 }
 
 .scroll::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 6px;
+  background: var(--line-2);
+  border-radius: var(--r-full);
   border: 3px solid transparent;
   background-clip: content-box;
   transition: background-color .15s;
 }
 
 .scroll:hover::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
+  background: var(--line-3);
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 .scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--text-3);
+  background: var(--ink-25);
   border: 2px solid transparent;
   background-clip: content-box;
 }
@@ -118,11 +195,16 @@ button {
   background: transparent;
 }
 
-.t { color: var(--text); }
-.t2 { color: var(--text-2); }
-.t3 { color: var(--text-3); }
+/* ============================================================
+   工具类
+   ============================================================ */
+
+.t  { color: var(--ink); }
+.t2 { color: var(--ink-80); }
+.t3 { color: var(--ink-40); }
+
 .mono {
-  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
   letter-spacing: -.1px;
 }

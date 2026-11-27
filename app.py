@@ -62,6 +62,32 @@ def parse_shell_args(argv):
     return out
 
 
+def _heal_shellmenu():
+    """右键菜单指向的程序不见了，就把它指回当前 exe。
+
+    典型事故：注册表里的菜单项还指着 `dist\\溯源\\溯源.exe`，但那个目录
+    被删了（PyInstaller 每次重建都会先删 dist/），点右键毫无反应且没有任何
+    提示。这里在启动时检测一次，能修就静默修掉。
+
+    只在 frozen 时动手，原因见调用处的注释。
+    """
+    if not pathmod.is_frozen():
+        return
+    try:
+        from tools import shellmenu
+        st = shellmenu.status()
+    except Exception:
+        return
+    if not st.get('stale'):
+        return
+    try:
+        shellmenu.repair()
+        print(f'右键菜单已修复: {st.get("registered")} -> '
+              f'{st.get("expected")}')
+    except Exception as e:
+        print(f'右键菜单修复失败: {e}')
+
+
 def handle_shell(argv):
     """右键触发时把请求转成服务端的一次动作。
 
@@ -436,6 +462,14 @@ def main():
     # 自检：排查打包环境里模块缺失、路径解析错误
     if '--selftest' in sys.argv:
         return selftest()
+
+    # 右键菜单自愈：注册项指向的程序不见了（常见于 dist/ 被重新打包删掉），
+    # 就把它改指向当前这个 exe。
+    #
+    # **只在 frozen 时做。** 源码运行时 _exe_path() 是 python.exe + app.py，
+    # 自动修复会把注册表从「指向 exe」改成「指向 python 脚本」—— 看着修好了，
+    # 实际把用户的打包版右键换成了开发命令。开发时我不该动这份注册表。
+    _heal_shellmenu()
 
     # 资源管理器右键触发
     handled = handle_shell(sys.argv[1:])

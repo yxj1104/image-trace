@@ -48,6 +48,14 @@ function setSearchMode(mode) {
     if (mode === 'semantic') runSemanticSearch(inp.value.trim());
     else if (mode === 'text') runTextSearch(inp.value.trim());
     else applyFilters();
+  } else if (mode === 'name') {
+    // 切回文件名模式且输入框是空的，也必须重刷列表。
+    //
+    // 图中文/画面的「范围页」是把 #grid 设成 display:none、#empty 撑满
+    // 显示的。不重刷的话这两处 display 都留在范围页的状态，用户切回
+    // 「文件名」看到的还是「选择要识别文字的范围」—— 三个模式全卡在
+    // 同一屏，只有标题变了。
+    applyFilters();
   }
 }
 
@@ -69,7 +77,42 @@ async function enterSemanticMode() {
   }
   // 已就绪：如果输入框里有词，直接搜
   const q = $('#q').value.trim();
-  if (q) runSemanticSearch(q);
+  if (q) {
+    runSemanticSearch(q);
+    return;
+  }
+  // 索引就绪但还没输入查询词：不能什么都不做。
+  // 上一个模式的界面（比如图中文的范围页）会原样留在屏幕上，
+  // 用户点了「画面」却看到「选择要识别文字的范围」，以为点错了。
+  showSemanticIdle();
+}
+
+/** 画面索引已就绪、等待用户输入查询词时的空态 */
+function showSemanticIdle() {
+  const grid = $('#grid');
+  const empty = $('#empty');
+  grid.style.display = 'none';
+  empty.style.display = '';
+
+  const title = $('#main-title');
+  const count = $('#main-count');
+  if (title) title.textContent = '画面搜索';
+  if (count) count.textContent = '';
+
+  const n = (state.semantic && state.semantic.embedded) || 0;
+  empty.innerHTML = `
+    <div class="empty-icon">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.4"
+              stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="empty-title">按画面内容找图</div>
+    <div class="empty-desc small">
+      在上方输入框里描述画面，比如「沙滩」「酒店房间」「寺庙」。<br>
+      已建立画面索引 ${n.toLocaleString()} 张。
+    </div>`;
 }
 
 async function refreshSemanticStatus() {
@@ -93,6 +136,14 @@ function showSemanticSetup(st) {
   const empty = $('#empty');
   grid.style.display = 'none';
   empty.style.display = '';
+
+  // 标题跟着改。showTextSetup 里有这段，画面这边原来漏了 ——
+  // 结果点「画面」时标题还写着上一个模式的名字（比如「图中文索引」），
+  // 用户不知道自己在哪一屏。
+  const title = $('#main-title');
+  const count = $('#main-count');
+  if (title) title.textContent = '画面索引';
+  if (count) count.textContent = '';
 
   if (!st || !st.available) {
     // 模型缺失有三种可能：下了 lite 版、源码运行时忘了放模型、

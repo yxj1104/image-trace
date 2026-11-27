@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>目录树缩进修复 — 改前 / 改后</title>
+<style>
+:root {
+  --ink: #0E0E0E;
+  --ink-60: #6A6A6A;
+  --ink-40: #9A9A9A;
+  --surface: #FFFFFF;
+  --surface-2: #F7F7F7;
+  --line: #ECECEC;
+  --line-3: #D2D2D2;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: #EDEDED; color: var(--ink);
+  font-family: var(--font); font-size: 13px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 1200px; margin: 0 auto; padding: 36px 36px 72px; }
+
+.head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 26px; }
+.head h1 { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.head p { font-size: 12px; color: var(--ink-60); padding-bottom: 4px; }
+
+.card {
+  background: var(--surface); border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(14,14,14,.04);
+  padding: 22px; margin-bottom: 18px;
+}
+.card-h {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-3);
+}
+.card-h h2 { font-size: 15px; font-weight: 600; }
+.card-h span { font-size: 12px; color: var(--ink-40); }
+.card-h em {
+  margin-left: auto; font-style: normal; font-size: 11px;
+  color: var(--ink-40); font-family: "SF Mono", Consolas, monospace;
+}
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.box {
+  border-radius: 14px; overflow: hidden;
+  background: #F2F2F2; border: 1px solid var(--line);
+}
+.box img { display: block; width: 100%; }
+/* 小图不要拉伸：按原始像素显示，居中 */
+.box.small { max-width: 660px; margin: 0 auto; }
+.box.small img { width: auto; max-width: 100%; margin: 0 auto; }
+.cap {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: var(--surface);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.cap b { font-weight: 600; }
+.cap .bad { color: #A34A3A; }
+.cap .ok { color: #2F6E5E; }
+
+table.diff { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.diff th {
+  text-align: left; font-weight: 600; color: var(--ink-40);
+  font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 0 0 10px; border-bottom: 1px solid var(--line-3);
+}
+table.diff td { padding: 11px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.diff td:first-child { color: var(--ink-60); width: 170px; }
+table.diff tr:last-child td { border-bottom: none; }
+.mono { font-family: "SF Mono", Consolas, monospace; font-size: 11px; }
+
+.note { font-size: 12px; color: var(--ink-60); line-height: 1.75; }
+.note b { color: var(--ink); font-weight: 600; }
+.note ul { margin: 8px 0 0; padding-left: 17px; }
+.note li { margin: 5px 0; }
+.note code {
+  font-family: "SF Mono", Consolas, monospace; font-size: 11px;
+  background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
+}
+
+.metrics { display: flex; gap: 44px; flex-wrap: wrap; }
+.metric { min-width: 130px; }
+.num-big {
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 26px; font-weight: 600;
+}
+.num-lbl { font-size: 11px; color: var(--ink-40); margin-top: 2px; }
+.bad-n { color: #A34A3A; }
+.ok-n { color: #2F6E5E; }
+
+.diagram {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px; background: var(--surface-2); border-radius: 14px;
+  font-family: "SF Mono", Consolas, monospace; font-size: 11px;
+  line-height: 1.9; color: var(--ink-60);
+}
+.diagram b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="head">
+    <h1>目录树缩进修复</h1>
+    <p>父子两层原本精确重合，层级看不出来</p>
+  </div>
+
+  <!-- 1. 对比 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>侧栏「目录」区域</h2>
+      <span>同一段数据，只改了缩进规则</span>
+      <em>6× 渲染</em>
+    </div>
+    <div class="box small">
+      <img src="shots/cmp/tree-stack.png" alt="改前改后上下对比">
+      <div class="cap">
+        <b>上：改前</b><span class="bad">父行与子行文字起点都是 79.3px，完全重合</span>
+        <b style="margin-left:24px">下：改后</b><span class="ok">父行 57.7 / 子行 73.5，缩进 15.8px</span>
+      </div>
+    </div>
+
+    <p class="note" style="margin-top:16px">
+      改前那一行「<b>▾ • 2026案例</b>」里，箭头、圆点、文字三个元素挤在一起，
+      而下面「产品海报」的圆点和文字，<b>跟父行落在完全相同的横坐标上</b> ——
+      两层看起来是平级的，唯一区别是父行多挂了个箭头。
+    </p>
+  </div>
+
+  <!-- 2. 根因 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>根因：一个加法刚好抵消</h2>
+    </div>
+    <div class="diagram">
+      <div>改前 CSS</div>
+      <div>&nbsp;&nbsp;.tree-row.d1 { padding-left: <b>20px</b> }</div>
+      <div>&nbsp;&nbsp;.tree-row.d2 { padding-left: <b>38px</b> }</div>
+      <div>&nbsp;&nbsp;.tree-row&nbsp;&nbsp;&nbsp; { gap: <b>6px</b> }</div>
+      <div>&nbsp;&nbsp;.tree-caret&nbsp;&nbsp;&nbsp; { 宽 <b>12px</b> }</div>
+      <div>&nbsp;</div>
+      <div>父行落点：20 + 12 + 6 = <b>38</b></div>
+      <div>子行落点：<b>38</b></div>
+      <div>&nbsp;</div>
+      <div>→ <b>正好相等</b>，所以圆点和文字精确重合</div>
+    </div>
+    <p class="note" style="margin-top:16px">
+      父行左侧那个 <code>.tree-caret</code>（12px 的箭头盒子）加上 6px 间距，
+      刚好等于 d1 和 d2 的 padding 差（38 − 20 = 18 = 12 + 6）。
+      箭头占掉的宽度被后续元素完全吃掉，缩进量归零。
+    </p>
+    <p class="note" style="margin-top:8px">
+      换句话说：<b>箭头不是缩进的一部分，它是把缩进抵消掉的东西。</b>
+      这也解释了为什么它看起来「悬空」—— 左边一段空白，右边紧贴圆点，
+      既不对齐分组标题，也不构成任何列。
+    </p>
+  </div>
+
+  <!-- 3. 修法 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>修法</h2>
+    </div>
+    <div class="diagram">
+      <div>改后 CSS</div>
+      <div>&nbsp;&nbsp;.tree-row.d1 { padding-left: <b>6px</b> }</div>
+      <div>&nbsp;&nbsp;.tree-row.d2 { padding-left: <b>40px</b> }</div>
+      <div>&nbsp;</div>
+      <div>父行落点：6 + 12 + 6 = <b>24</b>（箭头在 6，与标题左对齐）</div>
+      <div>子行落点：<b>40</b></div>
+      <div>&nbsp;</div>
+      <div>→ 相差 <b>16px</b>，层级靠缩进表达</div>
+    </div>
+    <p class="note" style="margin-top:16px">
+      <b>两条规则：</b>
+    </p>
+    <div class="note" style="margin-top:6px">
+      <ul>
+        <li><b>父行箭头与分组标题左对齐</b>（都从面板内容区起点开始）——
+          箭头是这一组的开关，它应该跟组名站在同一条线上</li>
+        <li><b>子行缩进 16px</b> —— 这是唯一表达层级的手段，不能被任何元素抵消</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 4. 数据 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>实测数据</h2>
+      <span>像素扫描，以面板内容区左边缘为 0</span>
+    </div>
+    <div class="metrics" style="margin-bottom:20px">
+      <div class="metric">
+        <div class="num-big bad-n">0.0</div>
+        <div class="num-lbl">改前：父子缩进差 (px)</div>
+      </div>
+      <div class="metric">
+        <div class="num-big ok-n">15.8</div>
+        <div class="num-lbl">改后：父子缩进差 (px)</div>
+      </div>
+      <div class="metric">
+        <div class="num-big">6.3 → 0.2</div>
+        <div class="num-lbl">箭头相对标题的左偏移 (px)</div>
+      </div>
+    </div>
+    <table class="diff">
+      <tr><th>测量项</th><th>改前</th><th>改后</th></tr>
+      <tr>
+        <td>分组标题「目录」起点</td>
+        <td class="mono">31.5 px</td>
+        <td class="mono">31.5 px</td>
+      </tr>
+      <tr>
+        <td>父行箭头起点</td>
+        <td class="mono">44.7 px（悬空，不对齐任何列）</td>
+        <td class="mono">31.3 px（与标题对齐）</td>
+      </tr>
+      <tr>
+        <td>父行文字起点</td>
+        <td class="mono">79.3 px</td>
+        <td class="mono">57.7 px</td>
+      </tr>
+      <tr>
+        <td>子行文字起点</td>
+        <td class="mono">79.3 px ← 与父行完全重合</td>
+        <td class="mono">73.5 px</td>
+      </tr>
+      <tr>
+        <td>父子缩进差</td>
+        <td class="mono">0.0 px</td>
+        <td class="mono">15.8 px</td>
+      </tr>
+    </table>
+    <p class="note" style="margin-top:12px">
+      15.8px 与 CSS 设计值 16px 相差 0.2px，是字形左留白导致的取整误差
+      （「2026案例」以数字开头，「产品海报」以汉字开头，两者前置留白不同）。
+      视觉上 16px 已足够分层。
+    </p>
+  </div>
+
+  <!-- 5. 影响 -->
+  <div class="card">
+    <div class="card-h"><h2>影响范围</h2></div>
+    <p class="note">
+      只影响侧栏「目录」这一块。真实后端返回的目录树是三层
+      （盘符 → 一级目录 → 二级目录），演示稿只画了两层，
+      但 <code>d1</code> / <code>d2</code> 两条规则就是全部层级逻辑，
+      第三层沿用同一套缩进。
+    </p>
+    <p class="note" style="margin-top:8px">
+      其他区域（类型、格式、时间、尺寸、颜色、显示）不受影响。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

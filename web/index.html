@@ -13,10 +13,11 @@
 <div id="app">
   <header id="top">
     <div class="brand">
+      <img class="brand-mark" src="/static/icon.png" alt="">
       <span class="brand-name">溯源</span>
-      <span class="brand-sub">ImageTrace</span>
     </div>
 
+    <!-- 搜索框：拖图入口嵌在框内右侧，不再单独占顶栏一格 -->
     <div class="searchbox" id="searchbox">
       <svg class="sb-icon" width="13" height="13" viewBox="0 0 14 14" fill="none">
         <circle cx="6" cy="6" r="4.2" stroke="currentColor" stroke-width="1.3"/>
@@ -30,6 +31,27 @@
           <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor"
                 stroke-width="1.4" stroke-linecap="round"/></svg>
       </button>
+
+      <div class="dz-chip" id="dz">
+        <span class="dz-chip-idle" id="dz-empty">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path d="M8 11V3m0 0L5 6m3-3l3 3" stroke="currentColor"
+                  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2.5 10.5v2A1.5 1.5 0 004 14h8a1.5 1.5 0 001.5-1.5v-2"
+                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span id="dz-text">拖图搜索</span>
+        </span>
+        <img class="dz-thumb" id="dz-thumb" alt="">
+        <span class="dz-name" id="dz-name"></span>
+        <span class="dz-state" id="dz-state"></span>
+        <button class="dz-clear" id="dz-clear" aria-label="取消搜索">
+          <svg width="9" height="9" viewBox="0 0 10 10">
+            <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor"
+                  stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
       <div class="sb-panel" id="q-panel"></div>
     </div>
 
@@ -37,39 +59,6 @@
       <div class="seg-item on" data-sm="name">文件名</div>
       <div class="seg-item" data-sm="text">图中文</div>
       <div class="seg-item" data-sm="semantic">画面</div>
-    </div>
-
-    <button class="btn sm ghost ocr-entry" id="btn-ocr" style="display:none">
-      <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-        <rect x="2" y="2" width="10" height="10" rx="1.5"
-              stroke="currentColor" stroke-width="1.3"/>
-        <path d="M4.5 6h2M4.5 8.5h5" stroke="currentColor"
-              stroke-width="1.3" stroke-linecap="round"/>
-      </svg>
-      <span id="btn-ocr-text">文字索引</span>
-      <span class="ocr-entry-dot" id="btn-ocr-dot" style="display:none"></span>
-    </button>
-
-    <div class="dropzone" id="dz">
-      <img class="dz-thumb" id="dz-thumb" alt="">
-      <div class="dz-empty" id="dz-empty">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M8 11V3m0 0L5 6m3-3l3 3" stroke="currentColor"
-                stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2.5 10.5v2A1.5 1.5 0 004 14h8a1.5 1.5 0 001.5-1.5v-2"
-                stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-        </svg>
-        <span id="dz-text">拖图搜索</span>
-      </div>
-      <div class="dz-info" id="dz-info">
-        <span class="dz-name" id="dz-name"></span>
-        <span class="dz-state" id="dz-state"></span>
-      </div>
-      <button class="dz-clear" id="dz-clear" aria-label="取消搜索">
-        <svg width="9" height="9" viewBox="0 0 10 10">
-          <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor"
-                stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
     </div>
 
     <div class="top-spacer"></div>
@@ -107,6 +96,18 @@
       <span class="main-title" id="main-title">全部文件</span>
       <span class="main-count" id="main-count"></span>
       <div class="main-tools">
+        <!-- 文字索引入口。原在顶栏，那里已经有 9 个元素、1440 才勉强放下。
+             它本质是「图中文」模式的附属功能，移到主区标题栏更贴切。 -->
+        <button class="btn sm ghost ocr-entry" id="btn-ocr" style="display:none">
+          <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+            <rect x="2" y="2" width="10" height="10" rx="1.5"
+                  stroke="currentColor" stroke-width="1.3"/>
+            <path d="M4.5 6h2M4.5 8.5h5" stroke="currentColor"
+                  stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <span id="btn-ocr-text">文字索引</span>
+          <span class="ocr-entry-dot" id="btn-ocr-dot" style="display:none"></span>
+        </button>
         <div class="seg" id="view-seg">
           <div class="seg-item on" data-view="grid">网格</div>
           <div class="seg-item" data-view="list">列表</div>

@@ -35,6 +35,7 @@ const state = {
     days: '',
   },
   treeOpen: new Set(),
+  extExpand: false,     // 格式分组是否展开全部（默认只显示前 12 种）
   loading: false,
   roots: [],
   dataDir: '',
@@ -211,7 +212,7 @@ function createSlider(host, opts) {
 
 const PRESET_COLORS = [
   '#E24B4A', '#D85A30', '#EF9F27', '#C0A32C', '#639922', '#1D9E75',
-  '#2F6E5E', '#378ADD', '#534AB7', '#993556', '#5F5E5A', '#1F1E1C',
+  '#2E9E8F', '#378ADD', '#534AB7', '#993556', '#5F5E5A', '#1F1E1C',
 ];
 
 function hexToRgb(h) {
@@ -230,7 +231,7 @@ function rgbToHex(r, g, b) {
 function openColorPicker(anchor, cur, onPick) {
   const ov = $('#overlay');
   const md = $('#modal');
-  let rgb = cur ? hexToRgb(cur) : [47, 110, 94];
+  let rgb = cur ? hexToRgb(cur) : [106, 106, 106];
 
   md.innerHTML = `
     <div class="modal-head">
@@ -351,13 +352,36 @@ function renderSide() {
   const g2 = group('格式');
   const chips = document.createElement('div');
   chips.className = 'chips';
-  (f ? f.by_ext : []).forEach(x => {
-    // 白名单决定筛选器里显示哪些格式。加新格式时这里必须同步，
-    // 否则后端能索引、界面筛不出来（Office 就这样漏过一次）
-    if (!['psd', 'ai', 'cdr', 'pdf', 'png', 'jpg', 'jpeg', 'webp',
-          'svg', 'eps', 'tif', 'gif',
-          'doc', 'docx', 'docm', 'ppt', 'pptx', 'pptm',
-          'xls', 'xlsx', 'xlsm'].includes(x.ext)) return;
+
+  // 白名单决定筛选器里显示哪些格式。加新格式时这里必须同步，
+  // 否则后端能索引、界面筛不出来（Office 就这样漏过一次）
+  const EXT_OK = ['psd', 'ai', 'cdr', 'pdf', 'png', 'jpg', 'jpeg', 'webp',
+                  'svg', 'eps', 'tif', 'gif',
+                  'doc', 'docx', 'docm', 'ppt', 'pptx', 'pptm',
+                  'xls', 'xlsx', 'xlsm'];
+
+  // 按数量降序。后端返回的顺序是按扩展名字母排的，导致 XLS(2)/DOCM(1)
+  // 这种只剩个位数的格式排在前排，而 PSD 5000+ 排在中间 —— 读起来没有层次。
+  const exts = (f ? f.by_ext : [])
+    .filter(x => EXT_OK.includes(x.ext))
+    .sort((a, b) => b.count - a.count);
+
+  // 折叠：默认只显示前 12 个（按数量），其余藏进「+N 种」。
+  //
+  // 25 种格式在 272px 侧栏里排 8 行、233px 高 —— 实测侧栏内容 896px
+  // 比可视区多出 116px，用户必须滚动才能看到最下面的「颜色」。
+  // 而后 13 种加起来的文件数不到总量的 0.4%，占的空间却是前 12 种的
+  // 两倍。折叠掉它们，常见格式就全在首屏内了。
+  //
+  // **已选中的格式永远显示**，不管在第几位 —— 否则折叠后筛选项
+  // 消失了，用户看不出为什么结果变少。
+  const VISIBLE = 12;
+  const shown = state.extExpand
+    ? exts
+    : exts.filter((x, i) => i < VISIBLE || state.sel.ext.has(x.ext));
+  const hidden = exts.length - shown.length;
+
+  shown.forEach(x => {
     const c = document.createElement('div');
     c.className = 'chip' + (state.sel.ext.has(x.ext) ? ' on' : '');
     c.innerHTML = `<span>${x.ext.toUpperCase()}</span>
@@ -369,6 +393,18 @@ function renderSide() {
     };
     chips.appendChild(c);
   });
+
+  if (hidden > 0 || state.extExpand) {
+    const more = document.createElement('div');
+    more.className = 'chip chip-more';
+    more.textContent = state.extExpand ? '收起' : `+${hidden} 种`;
+    more.onclick = () => {
+      state.extExpand = !state.extExpand;
+      renderSide();
+    };
+    chips.appendChild(more);
+  }
+
   g2.body.appendChild(chips);
   host.appendChild(g2.el);
 
@@ -422,55 +458,39 @@ function renderSide() {
   wrap.innerHTML = `
     <div class="range-row">
       <div class="stepper" data-k="widthMin">
-        <button class="stepper-btn" data-d="-1">
-          <svg width="7" height="7" viewBox="0 0 8 8"><path d="M1 4h6"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
-        <input type="number" placeholder="宽" value="${state.sel.widthMin ?? ''}">
-        <button class="stepper-btn" data-d="1">
-          <svg width="7" height="7" viewBox="0 0 8 8"><path d="M4 1v6M1 4h6"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
+        <input type="number" placeholder="宽 ≥" value="${state.sel.widthMin ?? ''}">
+        <div class="stepper-arrows">
+          <button class="stepper-btn" data-d="1"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></button>
+          <button class="stepper-btn" data-d="-1"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></button>
+        </div>
       </div>
       <span class="range-sep">–</span>
       <div class="stepper" data-k="widthMax">
-        <button class="stepper-btn" data-d="-1">
-          <svg width="7" height="7" viewBox="0 0 8 8"><path d="M1 4h6"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
-        <input type="number" placeholder="宽" value="${state.sel.widthMax ?? ''}">
-        <button class="stepper-btn" data-d="1">
-          <svg width="7" height="7" viewBox="0 0 8 8"><path d="M4 1v6M1 4h6"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
+        <input type="number" placeholder="宽 ≤" value="${state.sel.widthMax ?? ''}">
+        <div class="stepper-arrows">
+          <button class="stepper-btn" data-d="1"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></button>
+          <button class="stepper-btn" data-d="-1"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></button>
+        </div>
       </div>
     </div>
     <div class="range-row">
       <div class="stepper" data-k="heightMin">
-        <button class="stepper-btn" data-d="-1">
-          <svg width="7" height="7" viewBox="0 0 8 8"><path d="M1 4h6"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
-        <input type="number" placeholder="高" value="${state.sel.heightMin ?? ''}">
-        <button class="stepper-btn" data-d="1">
-          <svg width="7" height="7" viewBox="0 0 8 8"><path d="M4 1v6M1 4h6"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
+        <input type="number" placeholder="高 ≥" value="${state.sel.heightMin ?? ''}">
+        <div class="stepper-arrows">
+          <button class="stepper-btn" data-d="1"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></button>
+          <button class="stepper-btn" data-d="-1"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></button>
+        </div>
       </div>
       <span class="range-sep">–</span>
       <div class="stepper" data-k="heightMax">
-        <button class="stepper-btn" data-d="-1">
-          <svg width="7" height="7" viewBox="0 0 8 8"><path d="M1 4h6"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
-        <input type="number" placeholder="高" value="${state.sel.heightMax ?? ''}">
-        <button class="stepper-btn" data-d="1">
-          <svg width="7" height="7" viewBox="0 0 8 8"><path d="M4 1v6M1 4h6"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
+        <input type="number" placeholder="高 ≤" value="${state.sel.heightMax ?? ''}">
+        <div class="stepper-arrows">
+          <button class="stepper-btn" data-d="1"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></button>
+          <button class="stepper-btn" data-d="-1"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></button>
+        </div>
       </div>
     </div>
-    <div class="chips" style="margin-top:2px">
+    <div class="chips" style="margin-top:8px">
       ${[['竖版', 1, 1.2], ['横版', 1.2, 99], ['方图', .92, 1.08]]
         .map(([n, a, b]) => `<div class="chip" data-ar="${a},${b}">${n}</div>`)
         .join('')}
@@ -571,14 +591,18 @@ function treeNode(name, count, depth, kind, key, parentKey) {
   const hasChild = kind === 'drive';
   const on = state.sel.dirs.has(key);
   el.className = 'tree-node' + (on ? ' on' : '');
-  el.style.paddingLeft = (4 + depth * 11) + 'px';
+  // 缩进是层级的唯一表达，每层 16px。
+  // 用 CSS 变量传深度而不是直接设 padding-left：行本身有
+  // margin:0 -10px + padding-left:10px（让 hover 背景铺到面板边缘），
+  // 直接覆盖 padding-left 会把这段基距冲掉，depth 0 的元素会跑到
+  // 分组标题左边去。变量由 CSS 里的 calc 统一算。
+  el.style.setProperty('--depth', depth);
   el.innerHTML = `
     <span class="tree-twist ${hasChild ? (isOpen ? 'open' : '') :
       (kind === 'leaf' ? 'leaf' : '')}">
       ${hasChild || kind === 'dir' ? `<svg width="7" height="7"
-        viewBox="0 0 8 8"><path d="M2.5 1.5L5.5 4l-3 2.5" fill="none"
-        stroke="currentColor" stroke-width="1.3" stroke-linecap="round"
-        stroke-linejoin="round"/></svg>` : ''}
+        viewBox="0 0 7 7" fill="none"><path d="M2.2 1.4L5 3.5L2.2 5.6Z"
+        fill="currentColor"/></svg>` : ''}
     </span>
     <span class="tree-name"></span>
     <span class="tree-count">${count}</span>`;
@@ -947,8 +971,15 @@ function renderResults() {
     const err = it.error
       ? `<span class="card-err">!</span>` : '';
 
+    // 选中标记：缩略图右下角的对勾。
+    // 只是标记，不参与布局 —— CSS 里默认 display:none，.card.on 时才显示。
+    const check = `<span class="sel-check"><svg width="11" height="11"
+      viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2L4.8 8.5L9.5 3.8"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round"
+      stroke-linejoin="round"/></svg></span>`;
+
     c.innerHTML = `
-      <div class="card-thumb">${thumb}${badge}${score}${err}</div>
+      <div class="card-thumb">${thumb}${badge}${score}${err}${check}</div>
       <div class="card-meta">
         <div class="card-name"></div>
         <div class="card-sub"></div>
@@ -1986,6 +2017,15 @@ async function renderShellSection(md) {
       <div class="switch-track"><div class="switch-knob"></div></div>
       <span class="switch-label">在资源管理器右键菜单中显示</span>
     </div>
+    ${st.stale ? `
+    <div class="shell-stale" id="shellStale">
+      <div class="shell-stale-t">右键菜单已失效</div>
+      <div class="shell-stale-d">
+        菜单项还在，但它指向的程序已经找不到了 —— 点了没反应。
+        通常是安装目录被删除或移动过。
+      </div>
+      <button class="btn sm primary" id="shellRepair">一键修复</button>
+    </div>` : ''}
     <div class="kv" style="margin-top:6px">
       <span class="kv-v t3" id="shellHint"></span>
     </div>`;
@@ -1993,6 +2033,9 @@ async function renderShellSection(md) {
   const hint = $('#shellHint', md);
   // 每次调用都从当前 st 重算，避免开关后仍显示旧数字
   const hintText = () => {
+    if (st.stale) {
+      return `当前指向：${st.registered || '（读不到）'}`;
+    }
     if (!st.enabled) {
       return '开启后可在文件、文件夹、磁盘上右键直接调用。不需要管理员权限。';
     }
@@ -2001,6 +2044,35 @@ async function renderShellSection(md) {
       '右键任意 PSD/JPG 可直接搜源文件。';
   };
   hint.textContent = hintText();
+
+  // 修复：重写注册表，把命令指向当前这个程序
+  const repairBtn = $('#shellRepair', md);
+  if (repairBtn) {
+    repairBtn.onclick = async () => {
+      repairBtn.style.pointerEvents = 'none';
+      repairBtn.textContent = '修复中…';
+      try {
+        const r = await fetch('/api/shellmenu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'repair' }),
+        });
+        const j = await r.json();
+        if (j.error) { toast(j.error); return; }
+        st = j.status;
+        const box = $('#shellStale', md);
+        if (box && !st.stale) box.remove();
+        $('#shellToggle', md).classList.toggle('on', st.enabled);
+        hint.textContent = hintText();
+        toast(st.stale ? '修复未生效，请检查安装目录' : '已修复，右键菜单可以用了');
+      } catch (e) {
+        toast('修复失败');
+      } finally {
+        repairBtn.style.pointerEvents = '';
+        repairBtn.textContent = '一键修复';
+      }
+    };
+  }
 
   const toggle = $('#shellToggle', md);
   toggle.onclick = async () => {

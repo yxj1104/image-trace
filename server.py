@@ -607,6 +607,12 @@ class Handler(BaseHTTPRequestHandler):
         # db_path 可能在任意位置，缩略图永远在库文件同级的 thumbs/
         data_dir = os.path.dirname(os.path.abspath(self.db_path))
         full = os.path.join(data_dir, 'thumbs', r['thumb_path'])
+        # 库里的 thumb_path 只说明「索引时生成过」，不代表文件还在 ——
+        # thumbs/ 被清掉后（换机器、手工删缓存）库里仍有记录。
+        # 直接交给 _serve_file 会返回 404，前端就是一片破图，
+        # 所以这里必须显式判断，缺图时退到占位图。
+        if not os.path.isfile(full):
+            return self._serve_placeholder()
         return self._serve_file(full, 'image/jpeg')
 
     def _api_preview(self, qs):
@@ -1318,6 +1324,13 @@ class Handler(BaseHTTPRequestHandler):
                 include_drive=payload.get('drive', True),
             )
             self._json({'ok': True, 'installed': ok, 'failed': fail,
+                        'status': shellmenu.status()})
+        elif action == 'repair':
+            # 和 install 做同一件事，但语义不同：install 是「从没装过，
+            # 现在装」；repair 是「装了但指向的目标没了，重写一遍」。
+            # 分开是为了让界面能给出准确的提示文案。
+            ok, fail = shellmenu.repair()
+            self._json({'ok': True, 'repaired': ok, 'failed': fail,
                         'status': shellmenu.status()})
         elif action == 'uninstall':
             n = shellmenu.uninstall()

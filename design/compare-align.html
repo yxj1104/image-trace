@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>对齐修复对比 — 单选 / 步进</title>
+<style>
+:root {
+  --ink: #0E0E0E;
+  --ink-60: #6A6A6A;
+  --ink-40: #9A9A9A;
+  --surface: #FFFFFF;
+  --surface-2: #F7F7F7;
+  --line: #ECECEC;
+  --line-3: #D2D2D2;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: #EDEDED; color: var(--ink);
+  font-family: var(--font); font-size: 13px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 1500px; margin: 0 auto; padding: 36px 36px 72px; }
+
+.head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 26px; }
+.head h1 { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.head p { font-size: 12px; color: var(--ink-60); padding-bottom: 4px; }
+
+.card {
+  background: var(--surface); border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(14,14,14,.04);
+  padding: 22px; margin-bottom: 18px;
+}
+.card-h {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-3);
+}
+.card-h h2 { font-size: 15px; font-weight: 600; }
+.card-h span { font-size: 12px; color: var(--ink-40); }
+.card-h em {
+  margin-left: auto; font-style: normal; font-size: 11px;
+  color: var(--ink-40); font-family: "SF Mono", Consolas, monospace;
+}
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.box {
+  border-radius: 14px; overflow: hidden;
+  background: #F2F2F2; border: 1px solid var(--line);
+}
+.box img { display: block; width: 100%; }
+.cap {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: var(--surface);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.cap b { font-weight: 600; }
+.cap .bad { color: #A34A3A; }
+.cap .ok { color: #2F6E5E; }
+
+table.diff { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.diff th {
+  text-align: left; font-weight: 600; color: var(--ink-40);
+  font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 0 0 10px; border-bottom: 1px solid var(--line-3);
+}
+table.diff td { padding: 11px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.diff td:first-child { color: var(--ink-60); width: 160px; }
+table.diff tr:last-child td { border-bottom: none; }
+.mono { font-family: "SF Mono", Consolas, monospace; font-size: 11px; }
+
+.note { font-size: 12px; color: var(--ink-60); line-height: 1.75; }
+.note b { color: var(--ink); font-weight: 600; }
+.note ul { margin: 8px 0 0; padding-left: 17px; }
+.note li { margin: 5px 0; }
+.note code {
+  font-family: "SF Mono", Consolas, monospace; font-size: 11px;
+  background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
+}
+
+.num-big {
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 26px; font-weight: 600; color: var(--ink);
+}
+.num-lbl { font-size: 11px; color: var(--ink-40); margin-top: 2px; }
+.metrics { display: flex; gap: 40px; flex-wrap: wrap; }
+.metric { min-width: 120px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="head">
+    <h1>对齐修复对比</h1>
+    <p>两处都是真实缺陷，不是审美偏好</p>
+  </div>
+
+  <!-- 1. 左边界 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>问题 1 · 单选圈比开关多缩进 10px</h2>
+      <span>红色虚线是面板内容区左边界</span>
+      <em>4× 渲染</em>
+    </div>
+    <div class="pair">
+      <div class="box">
+        <img src="shots/cmp/left2-before.png" alt="改前">
+        <div class="cap"><b>改前</b><span class="bad">单选圈右缩 10px，没跟开关对齐</span></div>
+      </div>
+      <div class="box">
+        <img src="shots/cmp/left2-after.png" alt="改后">
+        <div class="cap"><b>改后</b><span class="ok">开关和圆圈都在同一条线上</span></div>
+      </div>
+    </div>
+
+    <p class="note" style="margin-top:16px">
+      <b>根因：</b><code>.side-row</code> 有 <code>margin: 0 -10px</code> +
+      <code>padding: 0 10px</code>（为了 hover 背景能铺到面板边缘），
+      但规范页演示区里这三行被内联写成了 <code>style="margin:0"</code>，
+      把负边距抵消掉了 —— 内容因此比开关多缩进 10px。
+    </p>
+    <p class="note" style="margin-top:8px">
+      <b>修法：</b>去掉内联 <code>margin:0</code>，让行沿用默认的负边距。
+      负边距往外甩 10px 仍在面板 padding 内，背景不会溢出。
+    </p>
+  </div>
+
+  <!-- 2. 箭头 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>问题 2 · 步进箭头偏下 4.2px</h2>
+      <span>三角字形被行高挤到了格子底部</span>
+      <em>4× 渲染</em>
+    </div>
+    <div class="pair">
+      <div class="box">
+        <img src="shots/cmp/arwv-before.png" alt="改前箭头" style="background:#fff">
+        <div class="cap"><b>改前</b><span class="bad">上箭头压着格子下沿</span></div>
+      </div>
+      <div class="box">
+        <img src="shots/cmp/arwv-after.png" alt="改后箭头" style="background:#fff">
+        <div class="cap"><b>改后</b><span class="ok">两个箭头各自居中</span></div>
+      </div>
+    </div>
+
+    <p class="note" style="margin-top:16px">
+      <b>根因：</b>箭头用的是 <code>▴</code> / <code>▾</code> 两个 Unicode 字形。
+      它们按文字基线排布，行高 18.6px，但格子只有 11px 高 ——
+      <code>place-items: center</code> 对超出行盒的字形不起作用，字形被挤到底部。
+    </p>
+    <p class="note" style="margin-top:8px">
+      <b>修法：</b>换成两个 7×4 的 SVG 三角形。SVG 没有基线概念，
+      <code>place-items: center</code> 绝对可控。实测偏移从 <b>+4.20px</b> 降到 <b>0.00px</b>。
+    </p>
+  </div>
+
+  <!-- 3. 数据 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>实测数据</h2>
+      <span>改动前后的量化差异</span>
+    </div>
+    <div class="metrics" style="margin-bottom:22px">
+      <div class="metric">
+        <div class="num-big">10 → 0</div>
+        <div class="num-lbl">单选圈相对开关的左偏移 (px)</div>
+      </div>
+      <div class="metric">
+        <div class="num-big">4.20 → 0.00</div>
+        <div class="num-lbl">箭头相对格子的垂直偏移 (px)</div>
+      </div>
+    </div>
+    <table class="diff">
+      <tr><th>测量项</th><th>改前</th><th>改后</th><th>方法</th></tr>
+      <tr>
+        <td>开关左边界</td>
+        <td class="mono">x = 851.0 px</td>
+        <td class="mono">x = 851.0 px</td>
+        <td>像素扫描首个非底色像素</td>
+      </tr>
+      <tr>
+        <td>单选圈左边界</td>
+        <td class="mono">x = 861.0 px</td>
+        <td class="mono">x = 851.0 px</td>
+        <td>同上</td>
+      </tr>
+      <tr>
+        <td>两者偏差</td>
+        <td class="mono">+10.0 px</td>
+        <td class="mono">0.0 px</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>箭头墨迹中心 vs 格子中心</td>
+        <td class="mono">+4.20 px（偏下）</td>
+        <td class="mono">0.00 px</td>
+        <td>10× 隔离渲染 + 像素包围盒</td>
+      </tr>
+      <tr>
+        <td>两箭头中心间距</td>
+        <td class="mono">12.0 px（设计值 12）</td>
+        <td class="mono">12.0 px</td>
+        <td>DOM 实测</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 4. 影响范围 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>影响范围</h2>
+    </div>
+    <p class="note">
+      <b>第一处只影响规范页。</b>真实界面的侧栏一直是对的 ——
+      它的 <code>.side-row</code> 没有内联 <code>margin:0</code>，
+      所以圆圈和开关本来就对齐。出问题的只是规范页演示区，
+      那里为了塞进窄容器加了内联样式。
+    </p>
+    <p class="note" style="margin-top:8px">
+      <b>第二处影响所有步进控件</b>（共 5 处：侧栏 4 个尺寸输入 + 规范页 1 个）。
+      它们的 CSS 是同一份，改一次全部生效。
+    </p>
+    <p class="note" style="margin-top:14px">
+      <b>还顺手改了树形箭头：</b><code>tree-caret</code> 里的 <code>▾</code>
+      也是字形，同样的基线问题，一并换成 SVG。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

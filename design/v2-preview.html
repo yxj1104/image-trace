@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>溯源 v2 — 视觉方案</title>
+<style>
+/* ============================================================
+   溯源 v2 设计规范 — 白 / 灰 / 黑
+   所有控件自绘，不使用任何原生控件
+   ============================================================ */
+
+:root {
+  /* ---- 墨阶（唯一色相）---- */
+  --ink:      #0E0E0E;
+  --ink-80:   #3A3A3A;
+  --ink-60:   #6A6A6A;
+  --ink-40:   #9A9A9A;
+  --ink-25:   #C2C2C2;
+
+  /* ---- 面 ---- */
+  --surface:    #FFFFFF;
+  --surface-2:  #F7F7F7;
+  --surface-3:  #F0F0F0;
+  --surface-4:  #E8E8E8;
+
+  /* ---- 线 ---- */
+  --line:    #ECECEC;
+  --line-2:  #E0E0E0;
+  --line-3:  #D2D2D2;
+
+  /* ---- 圆角 ---- */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+  --r-2xl: 28px;
+  --r-full: 999px;
+
+  /* ---- 字号（统一 6 级）---- */
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-15: 15px;
+  --fs-17: 17px;
+  --fs-22: 22px;
+
+  /* ---- 间距（4 的倍数）---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+
+  /* ---- 阴影（极克制）---- */
+  --sh-1: 0 1px 2px rgba(14,14,14,.04);
+  --sh-2: 0 2px 8px rgba(14,14,14,.06);
+  --sh-3: 0 8px 32px rgba(14,14,14,.10), 0 1px 3px rgba(14,14,14,.05);
+  --sh-4: 0 16px 56px rgba(14,14,14,.14), 0 2px 6px rgba(14,14,14,.06);
+
+  /* ---- 字号族：全局唯一 ---- */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei",
+          "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: #EDEDED;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--fs-13);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ---------- 页面外壳 ---------- */
+.page { max-width: 1560px; margin: 0 auto; padding: 40px 40px 80px; }
+
+/* 截图模式：去掉所有外壳，只留 1440×900 画框 */
+body.shot-mode { background: #F2F2F2; }
+body.shot-mode .page {
+  max-width: none; margin: 0; padding: 0;
+  width: 1440px; height: 900px; overflow: hidden;
+}
+body.shot-mode .frame-scale { transform: none !important; }
+
+.doc-head {
+  display: flex; align-items: flex-end; gap: 20px;
+  margin-bottom: 28px;
+}
+.doc-title {
+  font-size: var(--fs-22); font-weight: 600;
+  letter-spacing: -.01em; line-height: 1.2;
+}
+.doc-sub {
+  font-size: var(--fs-12); color: var(--ink-60);
+  padding-bottom: 3px;
+}
+.doc-tabs {
+  margin-left: auto;
+  display: flex; gap: 3px; padding: 4px;
+  background: var(--surface-3);
+  border-radius: var(--r-full);
+}
+.doc-tab {
+  padding: 7px 18px; border-radius: var(--r-full);
+  font-size: var(--fs-12); color: var(--ink-60);
+  cursor: pointer; user-select: none;
+  transition: color .16s, background .16s, box-shadow .16s;
+}
+.doc-tab:hover { color: var(--ink); }
+.doc-tab.on {
+  background: var(--surface); color: var(--ink);
+  box-shadow: var(--sh-1);
+  font-weight: 500;
+}
+
+/* ---------- 1440×900 画框 ---------- */
+.frame-outer {
+  position: relative;
+  border-radius: var(--r-2xl);
+  overflow: hidden;
+  box-shadow: var(--sh-4);
+  background: #F2F2F2;
+}
+.frame-scale { transform-origin: top left; width: 1440px; height: 900px; }
+
+/* ============================================================
+   应用本体
+   ============================================================ */
+.app {
+  width: 1440px; height: 900px;
+  display: grid;
+  grid-template-columns: 272px 1fr 376px;
+  /* 第二行必须写 minmax(0, 1fr)。只写 1fr 的话最小值是 auto，
+     内容超出时会把行撑高，整个 app 溢出 900px 画框（实测撑到 925）。
+     这是 CSS Grid 的经典坑。 */
+  grid-template-rows: 64px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  background: #F2F2F2;
+  font-size: var(--fs-13);
+  overflow: hidden;
+}
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 8px 0 14px;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-1);
+}
+.brand { display: flex; align-items: center; gap: 9px; margin-right: 6px; }
+/* 品牌图标：直接用应用真实图标（绿底放大镜 + 图片），
+   不做单色处理。图标是产品识别的一部分，改成黑白会丢掉识别度。 */
+.brand-mark {
+  width: 26px; height: 26px; border-radius: 8px;
+  display: block; flex: none;
+  object-fit: cover;
+}
+.brand-name {
+  font-size: var(--fs-15); font-weight: 600;
+  letter-spacing: -.01em;
+}
+.brand-sub {
+  font-size: var(--fs-11); color: var(--ink-40);
+  letter-spacing: .04em; text-transform: uppercase;
+  margin-left: -3px;
+}
+
+/* 搜索框 */
+.search {
+  display: flex; align-items: center; gap: 9px;
+  width: 348px; height: 38px; padding: 0 14px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-full);
+  color: var(--ink-40);
+  transition: background .16s, border-color .16s;
+}
+.search:hover { background: var(--surface-3); }
+.search.is-focus { background: var(--surface); border-color: var(--line-3); }
+.search-text { font-size: var(--fs-13); color: var(--ink-40); }
+.search-text.filled { color: var(--ink); }
+.search-caret {
+  width: 1.5px; height: 15px; background: var(--ink);
+  margin-left: -7px; animation: blink 1.1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0 } }
+
+/* 分段控件 */
+.seg {
+  display: inline-flex; align-items: center;
+  padding: 3px; gap: 2px;
+  background: var(--surface-3);
+  border-radius: var(--r-full);
+  flex: none;
+}
+.seg-item {
+  padding: 6px 14px; border-radius: var(--r-full);
+  font-size: var(--fs-12); color: var(--ink-60);
+  cursor: pointer; user-select: none; white-space: nowrap;
+  transition: color .16s, background .16s, box-shadow .16s;
+}
+.seg-item:hover { color: var(--ink); }
+.seg-item.on {
+  background: var(--surface); color: var(--ink);
+  box-shadow: 0 1px 2px rgba(14,14,14,.10);
+  font-weight: 500;
+}
+.seg.sm .seg-item { padding: 5px 11px; font-size: var(--fs-12); }
+
+/* 查询图 chip */
+.query-chip {
+  display: flex; align-items: center; gap: 9px;
+  height: 38px; padding: 4px 6px 4px 5px;
+  background: var(--surface-2);
+  border-radius: var(--r-full);
+  flex: none;
+}
+.query-chip-thumb {
+  width: 30px; height: 30px; border-radius: var(--r-full);
+  background: linear-gradient(150deg, #E8552F, #F6C57A);
+  flex: none;
+}
+.query-chip-body { display: flex; flex-direction: column; line-height: 1.25; }
+.query-chip-name { font-size: var(--fs-12); font-weight: 500; }
+.query-chip-state { font-size: var(--fs-11); color: var(--ink-60); }
+.query-chip-x {
+  width: 24px; height: 24px; border-radius: var(--r-full);
+  display: grid; place-items: center; color: var(--ink-40);
+  cursor: pointer; transition: background .16s, color .16s;
+}
+.query-chip-x:hover { background: var(--surface-4); color: var(--ink); }
+
+.grow { flex: 1; }
+
+/* 按钮 */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 14px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-12); font-weight: 500;
+  cursor: pointer; user-select: none;
+  border: 1px solid transparent;
+  transition: background .16s, border-color .16s, color .16s, box-shadow .16s;
+  background: none; color: inherit; font-family: inherit;
+}
+.btn-ghost {
+  background: var(--surface); color: var(--ink-80);
+  border-color: var(--line-2);
+}
+.btn-ghost:hover { border-color: var(--line-3); background: var(--surface-2); }
+.btn-dark { background: var(--ink); color: #fff; }
+.btn-dark:hover { background: #2A2A2A; }
+.btn-quiet { color: var(--ink-60); }
+.btn-quiet:hover { background: var(--surface-2); color: var(--ink); }
+.btn-icon {
+  width: 34px; height: 34px; padding: 0;
+  border-radius: var(--r-full);
+  display: grid; place-items: center;
+  color: var(--ink-60); cursor: pointer;
+  transition: background .16s, color .16s;
+}
+.btn-icon:hover { background: var(--surface-2); color: var(--ink); }
+
+/* 状态 */
+.status {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 12px 0 6px;
+  font-size: var(--fs-12); color: var(--ink-60);
+  white-space: nowrap;
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: var(--r-full);
+  background: var(--ink); opacity: .85;
+}
+
+/* 进度条 */
+.progress-track { display: none; }
+
+/* ---------- 左侧栏 ---------- */
+.side {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-1);
+  padding: 4px 0 14px;
+  overflow: hidden auto;
+  /* grid 子项默认 min-height:auto，内容超高时会把行撑破画框。
+     显式设 0，滚动才发生在面板内部而不是溢出。 */
+  min-height: 0;
+  scrollbar-width: none;
+}
+.side::-webkit-scrollbar { width: 0; }
+.side-sec { padding: 11px 18px 5px; }
+.side-sec + .side-sec { border-top: 1px solid var(--line); margin-top: 5px; padding-top: 12px; }
+.side-title {
+  font-size: var(--fs-11); font-weight: 600;
+  color: var(--ink-40); letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.side-row {
+  display: flex; align-items: center; gap: 9px;
+  height: 29px; padding: 0 10px; margin: 0 -10px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-13); color: var(--ink-80);
+  cursor: pointer;
+  transition: background .14s, color .14s;
+}
+.side-row:hover { background: var(--surface-2); }
+.side-row.on { color: var(--ink); font-weight: 500; }
+/* 选中时不加深圆环（那等于描边），只把内部实心点显出来 */
+.side-row.on .dot-radio::after { transform: scale(1); }
+.dot-radio {
+  width: 13px; height: 13px; border-radius: var(--r-full);
+  border: 1.5px solid var(--ink-25); flex: none;
+  display: grid; place-items: center;
+  transition: border-color .14s;
+}
+.dot-radio::after {
+  content: ''; width: 6px; height: 6px; border-radius: var(--r-full);
+  background: var(--ink); transform: scale(0);
+  transition: transform .14s;
+}
+.side-count {
+  margin-left: auto; font-size: var(--fs-11);
+  color: var(--ink-40); font-variant-numeric: tabular-nums;
+}
+
+/* 格式 chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 27px; padding: 0 10px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  font-size: var(--fs-11); font-weight: 500;
+  color: var(--ink-60); letter-spacing: .02em;
+  cursor: pointer;
+  transition: background .14s, color .14s;
+}
+.chip:hover { background: var(--surface-3); }
+.chip.on { background: var(--ink); color: #fff; }
+.chip.on .chip-n { color: rgba(255,255,255,.6); }
+.chip-n { color: var(--ink-40); font-weight: 400; }
+
+/* 目录树 */
+.tree-row {
+  display: flex; align-items: center; gap: 6px;
+  height: 27px; padding: 0 8px; margin: 0 -8px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-12); color: var(--ink-80);
+  cursor: pointer;
+  transition: background .14s;
+}
+.tree-row:hover { background: var(--surface-2); }
+.tree-row.on { background: var(--surface-3); color: var(--ink); font-weight: 500; }
+.tree-caret {
+  width: 12px; height: 12px; flex: none;
+  display: grid; place-items: center;
+  color: var(--ink-40); transition: transform .16s;
+}
+/* 缩进是层级的唯一表达。旧版 d1 = 20+12+6 = 38 = d2，
+   父子两层的圆点和文字精确重合，层级完全看不出来。
+   现在：d1 的 caret 与分组标题左对齐（22.7+6 = 28.7）；
+   d2 = d1 + caret12 + gap6 + 层级缩进16 = 40，子行文字比父行右 16px。 */
+.tree-row.d1 { padding-left: 6px; }
+.tree-row.d2 { padding-left: 40px; }
+.tree-dot { width: 5px; height: 5px; border-radius: 2px; background: var(--ink-25); flex: none; }
+
+/* 时间 / 尺寸 */
+.pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.pill {
+  padding: 5px 11px; border-radius: var(--r-full);
+  background: var(--surface-2);
+  font-size: var(--fs-11); color: var(--ink-60);
+  cursor: pointer; transition: background .14s, color .14s;
+}
+.pill:hover { background: var(--surface-3); }
+.pill.on { background: var(--ink); color: #fff; }
+
+.num-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.num-field {
+  flex: 1; display: flex; align-items: center;
+  height: 30px; padding: 0 4px 0 10px;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-12); color: var(--ink-60);
+}
+.num-field .num-k { color: var(--ink-40); flex: none; margin-right: 5px; }
+.num-field .num-v {
+  flex: 1; color: var(--ink); font-variant-numeric: tabular-nums;
+  font-size: var(--fs-11);
+}
+.num-field .num-v.unset { color: var(--ink-25); }
+.num-step { display: flex; flex-direction: column; gap: 1px; }
+/* 箭头用 SVG 不用 ▴▾ 字形：字形落在 line-height 基线上，11px 的格子装不下
+   18.6px 的行盒，会被挤到底部（实测偏下 4.2px）。SVG 没有基线，绝对可控。 */
+.num-step i {
+  width: 16px; height: 11px; border-radius: 3px;
+  display: grid; place-items: center;
+  color: var(--ink-40); font-style: normal;
+  transition: background .14s, color .14s;
+}
+.num-step i svg { display: block; }
+.num-step i:hover { background: var(--surface-4); color: var(--ink); }
+.num-sep { color: var(--ink-25); font-size: var(--fs-11); }
+
+/* 自绘开关 */
+.colors { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.color-dot {
+  width: 21px; height: 21px; border-radius: var(--r-full);
+  background: var(--c); cursor: pointer; flex: none;
+  box-shadow: inset 0 0 0 1px rgba(14,14,14,.10);
+  transition: box-shadow .14s, transform .14s;
+}
+.color-dot:hover { transform: scale(1.08); }
+/* 选中同样不用描边：放大 + 白色隔离环 + 柔和外投影。
+   外投影会被读成「浮起来」而不是「框住」，跟卡片的选中语言一致。
+   不要加淡灰实线环 —— 那只是换了颜色的描边，还是硬边。 */
+.color-dot.on {
+  transform: scale(1.2);
+  box-shadow: inset 0 0 0 1px rgba(14,14,14,.10),
+              0 0 0 2px var(--surface),
+              0 2px 8px rgba(14,14,14,.26);
+}
+.color-dot.any {
+  background: var(--surface-2);
+  position: relative;
+}
+.color-dot.any::after {
+  content: ''; position: absolute; inset: 6px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--line-3);
+}
+.hue-track {
+  position: relative; height: 8px; border-radius: var(--r-full);
+  background: linear-gradient(90deg,#D94A2E,#E8A34A,#C9B458,#4E9A6A,#3D6FA8,#6B5AA8,#C1536E);
+  cursor: pointer;
+}
+.hue-knob {
+  position: absolute; top: 50%; width: 15px; height: 15px;
+  border-radius: var(--r-full); background: var(--surface);
+  transform: translateY(-50%);
+  /* 白圆 + 双层投影，不用深色描边。靠落差脱离彩虹底，靠影子读出手感。 */
+  box-shadow: 0 1px 4px rgba(14,14,14,.34),
+              0 0 0 1px rgba(14,14,14,.06);
+}
+
+.switch-row {
+  display: flex; align-items: center; gap: 9px;
+  font-size: var(--fs-12); color: var(--ink-80);
+  cursor: pointer;
+}
+.switch {
+  width: 32px; height: 18px; border-radius: var(--r-full);
+  background: var(--surface-4); flex: none;
+  position: relative; transition: background .18s;
+}
+.switch::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: var(--r-full);
+  background: #fff; box-shadow: 0 1px 2px rgba(14,14,14,.18);
+  transition: transform .18s;
+}
+.switch.on { background: var(--ink); }
+.switch.on::after { transform: translateX(14px); }
+
+/* ---------- 中间主区 ---------- */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.main-head {
+  display: flex; align-items: center; gap: 10px;
+  height: 46px; padding: 0 6px 0 8px;
+  flex: none;
+}
+.main-title { font-size: var(--fs-17); font-weight: 600; letter-spacing: -.01em; }
+.main-count {
+  font-size: var(--fs-12); color: var(--ink-40);
+  font-variant-numeric: tabular-nums;
+  padding: 2px 9px; border-radius: var(--r-full);
+  background: var(--surface-3);
+}
+.main-tools { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.grid-wrap {
+  flex: 1; overflow: hidden auto;
+  margin: 0 -6px; padding: 6px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-content: start;
+}
+
+/* 卡片 */
+.card {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 8px;
+  cursor: pointer;
+  box-shadow: var(--sh-1);
+  transition: box-shadow .18s, transform .18s;
+}
+.card:hover { box-shadow: var(--sh-2); transform: translateY(-2px); }
+/* 选中不用描边：抬升 + 加深投影 + 文件名加重 + 缩略图右下角对勾徽章。
+   投影半径收在 18px 内（卡片间隙只有 16px），再大就会糊到邻居身上。 */
+.card.on {
+  box-shadow: 0 6px 18px rgba(14,14,14,.16),
+              0 1px 4px rgba(14,14,14,.08);
+  transform: translateY(-2px);
+}
+.card.on .card-name { font-weight: 600; }
+
+/* 对勾徽章：放在缩略图右下角。左上被「源文件」占着，右上被匹配度占着，
+   只有右下是空的。用实心圆而不是描边，跟「不用边框」的取向一致。 */
+/* 对勾徽章：黑底白勾。这是 v1→v2 定的方案，用户已看过，本版不动。 */
+.sel-check {
+  display: none;
+  position: absolute; right: 7px; bottom: 7px;
+  width: 20px; height: 20px; border-radius: var(--r-full);
+  background: var(--ink);
+  box-shadow: 0 1px 4px rgba(14,14,14,.28);
+  place-items: center;
+  color: #fff;
+}
+.card.on .sel-check { display: grid; }
+.card-thumb {
+  position: relative; border-radius: var(--r-md);
+  overflow: hidden; background: var(--surface-3);
+  aspect-ratio: 3 / 4;
+}
+.card-thumb > .ph { width: 100%; height: 100%; display: block; }
+/* 源文件徽章：黑底白字。v1→v2 定的方案，本版不动。 */
+.card-badge {
+  position: absolute; top: 7px; left: 7px;
+  height: 20px; padding: 0 8px; border-radius: var(--r-full);
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 600; letter-spacing: .02em;
+  background: var(--ink); color: #fff;
+}
+.card-score {
+  position: absolute; top: 7px; right: 7px;
+  height: 20px; padding: 0 8px; border-radius: var(--r-full);
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255,255,255,.94);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(14,14,14,.14);
+  backdrop-filter: blur(4px);
+}
+.card-score.weak { background: rgba(255,255,255,.80); color: var(--ink-60); }
+.card-meta { padding: 9px 4px 3px; }
+.card-name {
+  font-size: var(--fs-12); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-sub {
+  display: flex; align-items: center; gap: 5px;
+  font-size: var(--fs-11); color: var(--ink-40);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.card-sub .grow { flex: 1; }
+
+/* ---------- 右侧详情 ---------- */
+.detail {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-1);
+  overflow: hidden auto;
+  padding: 8px 8px 20px;
+  min-height: 0;
+  scrollbar-width: none;
+}
+.detail::-webkit-scrollbar { width: 0; }
+}
+.detail-preview {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--surface-3);
+  display: grid; place-items: center;
+  padding: 12px;
+  height: 246px;
+  flex: none;
+}
+.detail-preview .ph {
+  width: 172px; height: 222px;
+  border-radius: var(--r-sm);
+  box-shadow: 0 4px 20px rgba(14,14,14,.14);
+  overflow: hidden;
+  flex: none;
+}
+.detail-body { padding: 16px 14px 4px; }
+.detail-name {
+  font-size: var(--fs-15); font-weight: 600;
+  letter-spacing: -.01em; word-break: break-all;
+}
+.detail-path {
+  font-size: var(--fs-11); color: var(--ink-40);
+  margin-top: 5px; word-break: break-all; line-height: 1.5;
+}
+.sect { margin-top: 15px; }
+.sect-title {
+  font-size: var(--fs-11); font-weight: 600;
+  color: var(--ink-40); letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 9px;
+}
+.kv {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 5px 0; font-size: var(--fs-12);
+}
+.kv-k { width: 58px; flex: none; color: var(--ink-40); }
+.kv-v { color: var(--ink-80); font-variant-numeric: tabular-nums; }
+
+.reason {
+  display: flex; align-items: center; gap: 7px;
+  font-size: var(--fs-12); color: var(--ink-80);
+  padding: 3px 0;
+}
+.reason i {
+  width: 4px; height: 4px; border-radius: var(--r-full);
+  background: var(--ink); flex: none; font-style: normal;
+}
+.reason.weak { color: var(--ink-40); }
+.reason.weak i { background: var(--ink-25); }
+
+.btn-row { display: flex; gap: 7px; margin-top: 14px; }
+.btn-row .btn { height: 34px; }
+.btn-row .btn-dark { flex: 1; justify-content: center; }
+
+.group-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px; margin: 0 -8px;
+  border-radius: var(--r-md);
+  cursor: pointer; transition: background .14s;
+}
+.group-item:hover { background: var(--surface-2); }
+.group-thumb {
+  width: 38px; height: 38px; border-radius: var(--r-sm);
+  flex: none;
+}
+.group-name { font-size: var(--fs-12); font-weight: 500; }
+.group-sub { font-size: var(--fs-11); color: var(--ink-40); }
+
+/* 海报占位图形 */
+.ph-1 { background: linear-gradient(155deg, #E8552F 0%, #F0854C 45%, #F7C67E 100%); }
+.ph-2 { background: linear-gradient(155deg, #C0362C 0%, #E15638 50%, #F2A05F 100%); }
+.ph-3 { background: linear-gradient(155deg, #2B3358 0%, #4A5580 55%, #9BA6C4 100%); }
+.ph-4 { background: linear-gradient(155deg, #23304F 0%, #3D4E76 50%, #8E9BB8 100%); }
+.ph-5 { background: linear-gradient(155deg, #B0231F 0%, #D94A2E 50%, #F0B05C 100%); }
+.ph-6 { background: linear-gradient(155deg, #1F5E52 0%, #3D8A72 55%, #C9DDB6 100%); }
+.ph-7 { background: linear-gradient(155deg, #7A3B22 0%, #B06B3C 50%, #EBCB94 100%); }
+.ph-8 { background: linear-gradient(155deg, #F2A0A0 0%, #F8D2C0 60%, #FDF3E4 100%); }
+
+/* 海报上的字 */
+.poster {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  color: rgba(255,255,255,.96);
+  padding: 10px;
+  text-align: center;
+}
+.poster-t {
+  font-size: clamp(12px, 11%, 19px);
+  font-weight: 700; letter-spacing: .01em;
+  line-height: 1.3;
+  text-shadow: 0 1px 8px rgba(0,0,0,.14);
+  word-break: break-word;
+  max-width: 100%;
+}
+.detail-preview .poster-t { font-size: 26px; }
+.poster-s {
+  font-size: 7px; letter-spacing: .2em; opacity: .78;
+  font-weight: 500;
+}
+.detail-preview .poster-s { font-size: 10px; }
+.poster-hair {
+  width: 40%; height: 1px; background: currentColor; opacity: .38;
+}
+/* 浅色底（粉、米）上的海报用墨色字，白字会看不见 */
+.poster.on-light {
+  color: rgba(28,24,20,.88);
+}
+.poster.on-light .poster-t { text-shadow: 0 1px 4px rgba(255,255,255,.5); }
+
+/* ============================================================
+   规范页
+   ============================================================ */
+.spec { display: none; }
+.spec.on { display: block; animation: fade .24s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px) } }
+.view { display: none; }
+.view.on { display: block; animation: fade .24s ease; }
+
+.spec-sec { margin-bottom: 44px; }
+.spec-h {
+  display: flex; align-items: baseline; gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-3);
+}
+.spec-h h2 { font-size: var(--fs-15); font-weight: 600; letter-spacing: -.01em; }
+.spec-h span { font-size: var(--fs-12); color: var(--ink-40); }
+.spec-h code {
+  margin-left: auto; font-size: var(--fs-11); color: var(--ink-40);
+  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+.spec-grid { display: grid; gap: 16px; }
+.g-2 { grid-template-columns: repeat(2, 1fr); }
+.g-3 { grid-template-columns: repeat(3, 1fr); }
+.g-4 { grid-template-columns: repeat(4, 1fr); }
+.g-6 { grid-template-columns: repeat(6, 1fr); }
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  box-shadow: var(--sh-1);
+}
+.panel-t {
+  font-size: var(--fs-11); font-weight: 600;
+  color: var(--ink-40); letter-spacing: .06em;
+  text-transform: uppercase; margin-bottom: 14px;
+}
+
+/* 色板 */
+.swatch { border-radius: var(--r-md); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(14,14,14,.06); }
+.swatch-c { height: 72px; }
+.swatch-m {
+  padding: 9px 11px; background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.swatch-n { font-size: var(--fs-12); font-weight: 500; }
+.swatch-v {
+  font-size: var(--fs-11); color: var(--ink-40);
+  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
+  text-transform: uppercase;
+}
+
+/* 字号 */
+.type-row {
+  display: flex; align-items: baseline; gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+.type-row:last-child { border-bottom: none; }
+.type-meta {
+  width: 150px; flex: none;
+  font-size: var(--fs-11); color: var(--ink-40);
+  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+.type-sample { color: var(--ink); }
+
+/* 圆角 */
+.r-samples { display: flex; gap: 12px; flex-wrap: wrap; }
+.r-item { text-align: center; }
+.r-box {
+  width: 76px; height: 76px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line-3);
+  display: grid; place-items: center;
+  font-size: var(--fs-11); color: var(--ink-40);
+  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+.r-label {
+  margin-top: 7px; font-size: var(--fs-11); color: var(--ink-40);
+  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+/* 间距 */
+.s-row { display: flex; align-items: center; gap: 14px; padding: 6px 0; }
+.s-bar { height: 12px; background: var(--ink); border-radius: 2px; opacity: .82; }
+.s-name {
+  width: 62px; font-size: var(--fs-11); color: var(--ink-40);
+  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+/* 组件展示 */
+.demo { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+.demo-col { display: flex; flex-direction: column; gap: 11px; }
+/* 演示区里的行沿用 .side-row 的负边距，这样圆圈和开关左边界对齐。
+   负边距往外甩 10px，仍在面板 padding 内，背景不会溢出。 */
+.demo-rows { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+
+.note {
+  font-size: var(--fs-12); color: var(--ink-60);
+  line-height: 1.7;
+}
+.note b { color: var(--ink); font-weight: 600; }
+.note code {
+  font-family: "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 11px; background: var(--surface-3);
+  padding: 1px 5px; border-radius: 4px;
+}
+.note ul { margin: 8px 0 0; padding-left: 17px; }
+.note li { margin: 5px 0; }
+
+.tag {
+  display: inline-flex; align-items: center;
+  height: 22px; padding: 0 9px;
+  border-radius: var(--r-full);
+  font-size: 10px; font-weight: 600; letter-spacing: .02em;
+  background: var(--ink); color: #fff;
+}
+.tag.o { background: var(--surface-2); color: var(--ink-60); }
+
+table.cmp { width: 100%; border-collapse: collapse; font-size: var(--fs-12); }
+table.cmp th {
+  text-align: left; font-weight: 600; color: var(--ink-40);
+  font-size: var(--fs-11); letter-spacing: .04em; text-transform: uppercase;
+  padding: 0 0 9px; border-bottom: 1px solid var(--line-3);
+}
+table.cmp td { padding: 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.cmp td:first-child { color: var(--ink-60); width: 128px; }
+table.cmp tr:last-child td { border-bottom: none; }
+.old { color: var(--ink-40); text-decoration: line-through; }
+.new { color: var(--ink); font-weight: 500; }
+
+/* 自定义滚动条 */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--line-3); border-radius: var(--r-full);
+  border: 3px solid transparent; background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-25);
+  border: 2px solid transparent; background-clip: content-box;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-head">
+    <div>
+      <div class="doc-title">溯源 v2 · 视觉方案</div>
+      <div class="doc-sub">白灰黑 · 大圆角 · 统一字体与字号阶梯</div>
+    </div>
+    <div class="doc-tabs" id="tabs">
+      <div class="doc-tab on" data-v="browse">浏览态</div>
+      <div class="doc-tab" data-v="search">以图搜图</div>
+      <div class="doc-tab" data-v="spec">设计规范</div>
+    </div>
+  </div>
+
+  <!-- ============ 视图 1：浏览 ============ -->
+  <div class="view on" id="v-browse">
+    <div class="frame-outer"><div class="frame-scale" id="f1"></div></div>
+  </div>
+
+  <!-- ============ 视图 2：以图搜图 ============ -->
+  <div class="view" id="v-search">
+    <div class="frame-outer"><div class="frame-scale" id="f2"></div></div>
+  </div>
+
+  <!-- ============ 视图 3：规范 ============ -->
+  <div class="spec" id="v-spec">
+
+    <div class="spec-sec">
+      <div class="spec-h">
+        <h2>色板</h2><span>只有一套灰阶，没有第二个色相</span>
+        <code>--ink / --surface / --line</code>
+      </div>
+      <div class="spec-grid g-6">
+        <div class="swatch"><div class="swatch-c" style="background:#0E0E0E"></div>
+          <div class="swatch-m"><div class="swatch-n">墨</div><div class="swatch-v">#0E0E0E</div></div></div>
+        <div class="swatch"><div class="swatch-c" style="background:#3A3A3A"></div>
+          <div class="swatch-m"><div class="swatch-n">墨 80</div><div class="swatch-v">#3A3A3A</div></div></div>
+        <div class="swatch"><div class="swatch-c" style="background:#6A6A6A"></div>
+          <div class="swatch-m"><div class="swatch-n">墨 60</div><div class="swatch-v">#6A6A6A</div></div></div>
+        <div class="swatch"><div class="swatch-c" style="background:#9A9A9A"></div>
+          <div class="swatch-m"><div class="swatch-n">墨 40</div><div class="swatch-v">#9A9A9A</div></div></div>
+        <div class="swatch"><div class="swatch-c" style="background:#E0E0E0"></div>
+          <div class="swatch-m"><div class="swatch-n">线 2</div><div class="swatch-v">#E0E0E0</div></div></div>
+        <div class="swatch"><div class="swatch-c" style="background:#F7F7F7"></div>
+          <div class="swatch-m"><div class="swatch-n">面 2</div><div class="swatch-v">#F7F7F7</div></div></div>
+      </div>
+      <p class="note" style="margin-top:14px">
+        界面本体全部落在灰阶上，<b>颜色只来自内容本身</b>（用户的设计稿缩略图）。
+        这样缩略图永远是画面焦点，界面不会跟内容抢注意力。
+        原来那个绿色主色（<code>#2F6E5E</code>）已经去掉 —— 它跟绿系海报撞色。
+      </p>
+    </div>
+
+    <div class="spec-sec">
+      <div class="spec-h">
+        <h2>字号阶梯</h2><span>6 级，全局只用这些值</span>
+        <code>--fs-11 / 12 / 13 / 15 / 17 / 22</code>
+      </div>
+      <div class="spec-grid g-2">
+        <div class="panel">
+          <div class="type-row"><div class="type-meta">11px / 标签·计数</div>
+            <div class="type-sample" style="font-size:11px">类型 · 格式 · 匹配依据</div></div>
+          <div class="type-row"><div class="type-meta">12px / 次级正文</div>
+            <div class="type-sample" style="font-size:12px">火锅季套餐.psd · 源文件</div></div>
+          <div class="type-row"><div class="type-meta">13px / 界面正文</div>
+            <div class="type-sample" style="font-size:13px">搜文件名或路径，空格分隔多个词</div></div>
+          <div class="type-row"><div class="type-meta">15px / 面板标题</div>
+            <div class="type-sample" style="font-size:15px;font-weight:600">火锅季套餐.jpg</div></div>
+          <div class="type-row"><div class="type-meta">17px / 主区标题</div>
+            <div class="type-sample" style="font-size:17px;font-weight:600">以图搜图结果</div></div>
+          <div class="type-row"><div class="type-meta">22px / 文档标题</div>
+            <div class="type-sample" style="font-size:22px;font-weight:600">溯源</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-t">规则</div>
+          <div class="note">
+            <ul>
+              <li><b>一套字体</b>：系统 UI 字体栈，Windows 上是 Segoe UI + 微软雅黑，Mac 上是 SF + 苹方。不引入 Web Font，启动零等待。</li>
+              <li><b>数字等宽</b>：全局 <code>font-feature-settings: "tnum" 1</code>，匹配度 97% 和 8% 不会左右跳。</li>
+              <li><b>只有两个字重</b>：400 正文、600 标题。不用 500，避免小字号下发虚。</li>
+              <li><b>行高</b>：正文 1.55，标题 1.2。不为单行文字单独设行高。</li>
+              <li><b>字距</b>：标题 <code>-.01em</code>，大写标签 <code>+.06em</code>，其余 0。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spec-sec">
+      <div class="spec-h">
+        <h2>圆角</h2><span>整体加大，卡片 18 / 面板 22 / 胶囊全圆</span>
+        <code>--r-xs … --r-2xl / --r-full</code>
+      </div>
+      <div class="spec-grid g-2">
+        <div class="panel">
+          <div class="r-samples">
+            <div class="r-item"><div class="r-box" style="border-radius:6px"></div>
+              <div class="r-label">6 xs</div></div>
+            <div class="r-item"><div class="r-box" style="border-radius:10px"></div>
+              <div class="r-label">10 sm</div></div>
+            <div class="r-item"><div class="r-box" style="border-radius:14px"></div>
+              <div class="r-label">14 md</div></div>
+            <div class="r-item"><div class="r-box" style="border-radius:18px"></div>
+              <div class="r-label">18 lg</div></div>
+            <div class="r-item"><div class="r-box" style="border-radius:22px"></div>
+              <div class="r-label">22 xl</div></div>
+            <div class="r-item"><div class="r-box" style="border-radius:28px"></div>
+              <div class="r-label">28 2xl</div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-t">用在哪</div>
+          <table class="cmp">
+            <tr><td>芯片 / 小零件</td><td>6 – 10px</td></tr>
+            <tr><td>缩略图 / 输入框</td><td>14px</td></tr>
+            <tr><td>卡片</td><td>18px</td></tr>
+            <tr><td>三栏面板 / 顶栏</td><td>22px</td></tr>
+            <tr><td>应用外框</td><td>28px</td></tr>
+            <tr><td>按钮 / 分段 / 徽章</td><td>全圆 999px</td></tr>
+          </table>
+        </div>
+      </div>
+      <p class="note" style="margin-top:14px">
+        卡片圆角 18 而缩略图 14 —— 差 4px 形成同心效果，看起来是「一处倒角、一层内衬」，
+        而不是两个不相关的圆角拼在一起。
+      </p>
+    </div>
+
+    <div class="spec-sec">
+      <div class="spec-h">
+        <h2>间距</h2><span>4 的倍数，只用 6 个档</span>
+        <code>4 / 8 / 12 / 16 / 20 / 24 / 32</code>
+      </div>
+      <div class="panel">
+        <div class="s-row"><div class="s-name">4</div><div class="s-bar" style="width:4px"></div>
+          <span class="note">图标与文字的缝</span></div>
+        <div class="s-row"><div class="s-name">8</div><div class="s-bar" style="width:8px"></div>
+          <span class="note">芯片之间</span></div>
+        <div class="s-row"><div class="s-name">12</div><div class="s-bar" style="width:12px"></div>
+          <span class="note">三栏之间的沟槽</span></div>
+        <div class="s-row"><div class="s-name">16</div><div class="s-bar" style="width:16px"></div>
+          <span class="note">卡片网格间距</span></div>
+        <div class="s-row"><div class="s-name">20</div><div class="s-bar" style="width:20px"></div>
+          <span class="note">面板内边距</span></div>
+        <div class="s-row"><div class="s-name">32</div><div class="s-bar" style="width:32px"></div>
+          <span class="note">章节之间的距离</span></div>
+      </div>
+    </div>
+
+    <div class="spec-sec">
+      <div class="spec-h">
+        <h2>组件</h2><span>全部自绘，无原生控件</span>
+        <code>button / seg / chip / switch / input</code>
+      </div>
+      <div class="spec-grid g-2">
+        <div class="panel">
+          <div class="panel-t">按钮</div>
+          <div class="demo">
+            <button class="btn btn-dark">打开所在位置</button>
+            <button class="btn btn-ghost">复制路径</button>
+            <button class="btn btn-quiet">看大图</button>
+          </div>
+          <div class="panel-t" style="margin-top:20px">分段控件</div>
+          <div class="demo">
+            <div class="seg"><div class="seg-item on">文件名</div>
+              <div class="seg-item">图中文</div><div class="seg-item">画面</div></div>
+            <div class="seg"><div class="seg-item">网格</div><div class="seg-item on">列表</div></div>
+          </div>
+          <div class="panel-t" style="margin-top:20px">芯片 / 徽章</div>
+          <div class="demo">
+            <div class="chip on"><span>PSD</span><span class="chip-n">22</span></div>
+            <div class="chip"><span>JPG</span><span class="chip-n">22</span></div>
+            <div class="chip"><span>PNG</span><span class="chip-n">3</span></div>
+            <span class="tag">源文件</span>
+            <span class="tag o">导出图</span>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-t">开关 / 单选 / 步进</div>
+          <div class="demo-col">
+            <div class="switch-row"><div class="switch on"></div><span>隐藏无预览的文件</span></div>
+            <div class="switch-row"><div class="switch"></div><span>只看有源文件的</span></div>
+            <div class="demo-rows">
+              <div class="side-row on"><div class="dot-radio"></div>全部<span class="side-count">47</span></div>
+              <div class="side-row"><div class="dot-radio"></div>源文件<span class="side-count">22</span></div>
+              <div class="side-row"><div class="dot-radio"></div>导出图<span class="side-count">25</span></div>
+            </div>
+            <div class="num-row" style="margin-top:6px">
+              <div class="num-field"><span>宽度 ≥ 1200</span>
+                <div class="num-step"><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></i><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></i></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:14px">
+        原生 <code>&lt;select&gt;</code> / <code>checkbox</code> / <code>input[type=color]</code> /
+        <code>title</code> 气泡 / 系统滚动条全部不用。滚动条用 <code>::-webkit-scrollbar</code> 自绘成
+        6px 的浅灰胶囊，悬停才加深。
+      </p>
+    </div>
+
+    <div class="spec-sec">
+      <div class="spec-h">
+        <h2>这一版改了什么</h2><span>相对 v1</span>
+      </div>
+      <div class="panel">
+        <table class="cmp">
+          <tr><th>项</th><th>v1</th><th>v2</th><th>为什么</th></tr>
+          <tr>
+            <td>主色</td>
+            <td class="old">深墨绿 #2F6E5E</td>
+            <td class="new">纯墨 #0E0E0E</td>
+            <td>绿色跟绿系海报撞色，选中态看不清（v1 已踩过）</td>
+          </tr>
+          <tr>
+            <td>圆角</td>
+            <td class="old">3 – 6px，偏方</td>
+            <td class="new">18 / 22，缩略图 14</td>
+            <td>设计工具的用户对圆角敏感，方角显硬</td>
+          </tr>
+          <tr>
+            <td>字号</td>
+            <td class="old">8.5 / 9.5 / 10 / 10.5 / 11 / 16</td>
+            <td class="new">11 / 12 / 13 / 15 / 17 / 22</td>
+            <td>v1 有 6 个挤在一起的碎档，且 8.5px 太小</td>
+          </tr>
+          <tr>
+            <td>最小字号</td>
+            <td class="old">8.5px</td>
+            <td class="new">11px</td>
+            <td>高分屏下 8.5px 糊成一团</td>
+          </tr>
+          <tr>
+            <td>布局</td>
+            <td class="old">三栏贴边，1px 分隔线</td>
+            <td class="new">三栏浮起，12px 沟槽</td>
+            <td>去掉硬线，靠底色和阴影分层</td>
+          </tr>
+          <tr>
+            <td>卡片</td>
+            <td class="old">1:1.3 竖版，信息挤</td>
+            <td class="new">3:4，名字 12 / 副标 11</td>
+            <td>3:4 更接近竖版海报的真实比例</td>
+          </tr>
+          <tr>
+            <td>选中态</td>
+            <td class="old">1.5px 黑描边</td>
+            <td class="new">投影抬升 + 右下对勾 + 名字加重</td>
+            <td>描边把卡片框死，跟「浮起」的层次语言冲突；也跟内容抢边界</td>
+          </tr>
+          <tr>
+            <td>源文件标记</td>
+            <td class="old">绿色小字 + 边框</td>
+            <td class="new">黑底白字胶囊</td>
+            <td>一眼能扫到，不依赖颜色</td>
+          </tr>
+          <tr>
+            <td>匹配度</td>
+            <td class="old">绿/灰区分强弱</td>
+            <td class="new">白底黑字 / 白底灰字</td>
+            <td>去掉颜色后靠透明度分层</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="spec-sec">
+      <div class="spec-h"><h2>还没做</h2><span>这版只是视觉稿</span></div>
+      <div class="panel">
+        <div class="note">
+          这是<b>静态演示</b>，没有接后端。确认方向后我再改 <code>web/theme.css</code>
+          和 <code>web/ui.css</code> 里的真实样式，那时要处理：
+          <ul>
+            <li>列表视图的间距与字号（这份稿只画了网格）</li>
+            <li>搜索建议下拉、右键菜单、模态框、提示气泡</li>
+            <li>索引进度条、索引设置页、文字索引范围选择</li>
+            <li>空状态、加载骨架屏、错误态</li>
+            <li>深色模式（灰阶换向即可，结构不变）</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- 画框缩放 ---------- */
+function fitFrame(el) {
+  const outer = el.parentElement;
+  const w = outer.clientWidth;
+  const s = w / 1440;
+  el.style.transform = `scale(${s})`;
+  outer.style.height = (900 * s) + 'px';
+}
+
+/* ---------- 标签页 ---------- */
+const tabs = document.getElementById('tabs');
+tabs.addEventListener('click', e => {
+  const t = e.target.closest('.doc-tab');
+  if (!t) return;
+  tabs.querySelectorAll('.doc-tab').forEach(x => x.classList.toggle('on', x === t));
+  const v = t.dataset.v;
+  ['browse', 'search'].forEach(k => {
+    document.getElementById('v-' + k).classList.toggle('on', k === v);
+  });
+  document.getElementById('v-spec').classList.toggle('on', v === 'spec');
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.frame-scale').forEach(fitFrame);
+  });
+});
+
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.frame-scale').forEach(fitFrame);
+});
+
+/* ---------- 截图模式 ----------
+   ?shot=browse / ?shot=search 时只渲染一个 1440×900 画框，不带文档外壳。
+   无头浏览器直接截这张图，尺寸就是 1:1，不用再裁。 */
+const SHOT = new URLSearchParams(location.search).get('shot');
+if (SHOT) {
+  document.body.classList.add('shot-mode');
+  document.querySelector('.page').innerHTML =
+    `<div class="frame-scale" id="fshot" style="transform:none"></div>`;
+}
+
+/* ============================================================
+   构建两个画框
+   ============================================================ */
+const PH = ['ph-1','ph-2','ph-3','ph-4','ph-5','ph-6','ph-7','ph-8'];
+const phCls = i => PH[i] || 'ph-1';
+
+const CARDS = [
+  { n:'火锅季套餐.jpg', sub:'导出图 · 760×1000', ph:0, t:'火锅季套餐', s:'HOTPOT', score:'97%',
+    pairName:'火锅季套餐.psd', pairSub:'源文件 · 760×1000' },
+  { n:'火锅季套餐.psd', sub:'源文件 · 760×1000', ph:1, t:'火锅季套餐', s:'HOTPOT', score:'96%', src:true,
+    pairName:'火锅季套餐.jpg', pairSub:'导出图 · 760×1000' },
+  { n:'中秋团圆.jpg',   sub:'导出图 · 760×1000', ph:2, t:'中秋团圆',   s:'MID AUTUMN', score:'8%', weak:true,
+    pairName:'中秋团圆.psd', pairSub:'源文件 · 760×1000' },
+  { n:'中秋团圆.psd',   sub:'源文件 · 760×1000', ph:3, t:'中秋团圆',   s:'MID AUTUMN', score:'8%', weak:true, src:true,
+    pairName:'中秋团圆.jpg', pairSub:'导出图 · 760×1000' },
+  { n:'春节主视觉.jpg', sub:'导出图 · 760×1000', ph:4, t:'新春快乐',   s:'SPRING FEST', score:'7%', weak:true,
+    pairName:'春节主视觉.psd', pairSub:'源文件 · 760×1000' },
+  { n:'春节主视觉.psd', sub:'源文件 · 760×1000', ph:5, t:'新春快乐',   s:'SPRING FEST', score:'6%', weak:true, src:true,
+    pairName:'春节主视觉.jpg', pairSub:'导出图 · 760×1000' },
+  { n:'夏季主视觉.jpg', sub:'导出图 · 760×1000', ph:6, t:'夏日海滩',   s:'SUMMER 2026',
+    pairName:'夏季主视觉.psd', pairSub:'源文件 · 760×1000' },
+  { n:'夏季主视觉.psd', sub:'源文件 · 760×1000', ph:7, t:'夏日海滩',   s:'SUMMER 2026', src:true,
+    pairName:'夏季主视觉.jpg', pairSub:'导出图 · 760×1000' },
+];
+
+const BROWSE_CARDS = [
+  { n:'甜品下午茶.jpg', sub:'41 KB · JPG', ph:7, t:'甜品下午茶', s:'DESSERT',
+    pairName:'甜品下午茶.psd', pairSub:'源文件 · 760×1000' },
+  { n:'甜品下午茶.psd', sub:'102 KB · PSD', ph:7, t:'甜品下午茶', s:'DESSERT', src:true,
+    pairName:'甜品下午茶.jpg', pairSub:'导出图 · 760×1000' },
+  { n:'版式参考-A.psd', sub:'88 KB · PSD', ph:3, t:'版式参考', s:'LAYOUT REF', src:true,
+    pairName:'版式参考-A.jpg', pairSub:'导出图 · 1200×900' },
+  { n:'版式参考-B.jpg', sub:'46 KB · JPG', ph:2, t:'版式参考', s:'LAYOUT REF',
+    pairName:'版式参考-B.psd', pairSub:'源文件 · 1200×900' },
+  { n:'展位效果图.psd', sub:'94 KB · PSD', ph:6, t:'国际会展中心', s:'BOOTH', src:true,
+    pairName:'展位效果图.jpg', pairSub:'导出图 · 1920×1080' },
+  { n:'易拉宝-正面.jpg', sub:'43 KB · JPG', ph:1, t:'国际会展中心', s:'ROLLUP',
+    pairName:'易拉宝-正面.psd', pairSub:'源文件 · 800×2000' },
+  { n:'配色灵感.png', sub:'16 KB · PNG', ph:5, t:'配色灵感', s:'PALETTE',
+    pairName:'—', pairSub:'没有成对的源文件' },
+  { n:'插画素材-1.png', sub:'13 KB · PNG', ph:0, t:'插画素材', s:'ASSET',
+    pairName:'—', pairSub:'没有成对的源文件' },
+];
+
+// ph-8 是浅粉、ph-7 是米黄浅 —— 这两张上的白字看不清，用墨色
+const LIGHT_PH = new Set([7, 8]);
+
+function poster(c) {
+  const light = LIGHT_PH.has(c.ph) ? ' on-light' : '';
+  return `<div class="ph ${phCls(c.ph)}"><div class="poster${light}">
+    <div class="poster-hair"></div>
+    <div class="poster-t">${c.t}</div>
+    <div class="poster-s">${c.s}</div>
+    <div class="poster-hair"></div>
+  </div></div>`;
+}
+
+function cardHTML(c, i, sel) {
+  return `<div class="card${sel === i ? ' on' : ''}">
+    <div class="card-thumb">
+      ${poster(c)}
+      ${c.src ? '<span class="card-badge">源文件</span>' : ''}
+      ${c.score ? `<span class="card-score${c.weak ? ' weak' : ''}">${c.score}</span>` : ''}
+      <span class="sel-check">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+          <path d="M2.5 6.2L4.8 8.5L9.5 3.8" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+    </div>
+    <div class="card-meta">
+      <div class="card-name">${c.n}</div>
+      <div class="card-sub"><span>${c.sub}</span><span class="grow"></span><span>11-26</span></div>
+    </div>
+  </div>`;
+}
+
+const SIDE = `
+  <div class="side-sec">
+    <div class="side-title">类型</div>
+    <div class="side-row on"><div class="dot-radio"></div>全部<span class="side-count">47</span></div>
+    <div class="side-row"><div class="dot-radio"></div>源文件<span class="side-count">22</span></div>
+    <div class="side-row"><div class="dot-radio"></div>导出图<span class="side-count">25</span></div>
+  </div>
+  <div class="side-sec">
+    <div class="side-title">格式</div>
+    <div class="chips">
+      <div class="chip on"><span>PSD</span><span class="chip-n">22</span></div>
+      <div class="chip"><span>JPG</span><span class="chip-n">22</span></div>
+      <div class="chip"><span>PNG</span><span class="chip-n">3</span></div>
+    </div>
+  </div>
+  <div class="side-sec">
+    <div class="side-title">目录</div>
+    <div class="tree-row d1"><span class="tree-caret"><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></span><span class="tree-dot"></span>2026案例<span class="side-count">47</span></div>
+    <div class="tree-row d2 on"><span class="tree-dot"></span>产品海报<span class="side-count">8</span></div>
+    <div class="tree-row d2"><span class="tree-dot"></span>节日素材<span class="side-count">6</span></div>
+    <div class="tree-row d2"><span class="tree-dot"></span>品牌素材<span class="side-count">6</span></div>
+    <div class="tree-row d2"><span class="tree-dot"></span>展会物料<span class="side-count">4</span></div>
+    <div class="tree-row d2"><span class="tree-dot"></span>素材库<span class="side-count">3</span></div>
+  </div>
+  <div class="side-sec">
+    <div class="side-title">时间</div>
+    <div class="pills">
+      <div class="pill on">不限</div><div class="pill">近 7 天</div>
+      <div class="pill">近 30 天</div><div class="pill">近一年</div>
+    </div>
+  </div>
+  <div class="side-sec">
+    <div class="side-title">尺寸</div>
+    <div class="num-row">
+      <div class="num-field"><span class="num-k">宽</span><span class="num-v">≥ 760</span>
+        <div class="num-step"><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></i><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></i></div></div>
+      <div class="num-field"><span class="num-k">宽</span><span class="num-v unset">≤ 不限</span>
+        <div class="num-step"><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></i><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></i></div></div>
+    </div>
+    <div class="num-row">
+      <div class="num-field"><span class="num-k">高</span><span class="num-v">≥ 1000</span>
+        <div class="num-step"><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></i><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></i></div></div>
+      <div class="num-field"><span class="num-k">高</span><span class="num-v unset">≤ 不限</span>
+        <div class="num-step"><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 0.5L6.4 3.4H0.6L3.5 0.5Z" fill="currentColor"/></svg></i><i><svg width="7" height="4" viewBox="0 0 7 4" fill="none"><path d="M3.5 3.5L0.6 0.6H6.4L3.5 3.5Z" fill="currentColor"/></svg></i></div></div>
+    </div>
+    <div class="pills" style="margin-top:8px">
+      <div class="pill">竖版</div><div class="pill">横版</div><div class="pill">方图</div>
+    </div>
+  </div>
+  <div class="side-sec">
+    <div class="side-title">颜色</div>
+    <div class="colors">
+      <div class="color-dot" style="--c:#D94A2E"></div>
+      <div class="color-dot" style="--c:#E8A34A"></div>
+      <div class="color-dot" style="--c:#C9B458"></div>
+      <div class="color-dot" style="--c:#4E9A6A"></div>
+      <div class="color-dot" style="--c:#3D6FA8"></div>
+      <div class="color-dot on" style="--c:#6B5AA8"></div>
+      <div class="color-dot any"></div>
+    </div>
+    <div class="hue-track"><div class="hue-knob" style="left:calc(22% - 7px)"></div></div>
+  </div>
+  <div class="side-sec">
+    <div class="side-title">显示</div>
+    <div class="switch-row"><div class="switch on"></div><span>隐藏无预览的文件</span></div>
+  </div>
+`;
+
+function topbar(state) {
+  // 拖图搜索时搜索框是空的 —— 查询图在右侧 chip 里，
+  // 文本框再填一遍就重复了
+  const search = `<span class="search-text">搜文件名或路径，空格分隔多个词</span>`;
+  const chip = state === 'search'
+    ? `<div class="query-chip">
+         <div class="query-chip-thumb"></div>
+         <div class="query-chip-body">
+           <div class="query-chip-name">火锅季套餐.jpg</div>
+           <div class="query-chip-state">已找到 6 个</div>
+         </div>
+         <div class="query-chip-x">
+           <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+             <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round"/></svg>
+         </div>
+       </div>`
+    : '';
+  return `<header class="topbar">
+    <div class="brand">
+      <img class="brand-mark" src="icon.png" alt="">
+      <span class="brand-name">溯源</span>
+      <span class="brand-sub">ImageTrace</span>
+    </div>
+
+    <div class="search${state === 'search' ? ' is-focus' : ''}">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+        <circle cx="6" cy="6" r="4.2" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M9.2 9.2L12 12" stroke="currentColor" stroke-width="1.4"
+              stroke-linecap="round"/>
+      </svg>
+      ${search}
+    </div>
+
+    <div class="seg sm">
+      <div class="seg-item ${state === 'browse' ? 'on' : ''}">文件名</div>
+      <div class="seg-item">图中文</div>
+      <div class="seg-item">画面</div>
+    </div>
+
+    ${chip}
+    <div class="grow"></div>
+
+    <button class="btn btn-quiet">
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+        <path d="M12 7a5 5 0 11-1.5-3.5M12 2v3.5H8.5" stroke="currentColor"
+              stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      更新索引
+    </button>
+
+    <div class="btn-icon">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 1.8v1.8M8 12.4v1.8M1.8 8h1.8M12.4 8h1.8M3.6 3.6l1.3 1.3M11.1 11.1l1.3 1.3M3.6 12.4l1.3-1.3M11.1 4.9l1.3-1.3"
+              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="status">
+      <span class="status-dot"></span>
+      ${state === 'search' ? '找到 1 个源文件 · 共 6 个相关' : '已索引 47 个文件'}
+    </div>
+  </header>`;
+}
+
+const MAIN_HEAD = (state) => `
+  <div class="main-head">
+    <span class="main-title">${state === 'search' ? '以图搜图结果' : '全部文件'}</span>
+    <span class="main-count">${state === 'search' ? '6' : '47'}</span>
+    <div class="main-tools">
+      <div class="seg sm">
+        <div class="seg-item on">网格</div>
+        <div class="seg-item">列表</div>
+      </div>
+      <button class="btn btn-ghost">
+        最近修改
+        <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+          <path d="M2.5 4L5 6.5 7.5 4" stroke="currentColor" stroke-width="1.4"
+                stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>`;
+
+function detailHTML(c, withMatch = true) {
+  return `<aside class="detail">
+    <div class="detail-preview">
+      <div class="ph ${phCls(c.ph)}">
+        <div class="poster${LIGHT_PH.has(c.ph) ? ' on-light' : ''}">
+          <div class="poster-hair"></div>
+          <div class="poster-t">${c.t}</div>
+          <div class="poster-s">${c.s}</div>
+          <div class="poster-hair"></div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div class="detail-name">${c.n}</div>
+      <div class="detail-path">D:\\作品集\\2026案例\\产品海报\\${c.n}</div>
+
+      <div class="sect">
+        <div class="kv"><span class="kv-k">类型</span><span class="kv-v">${c.src ? '源文件 · PSD' : '导出图 · JPG'}</span></div>
+        <div class="kv"><span class="kv-k">尺寸</span><span class="kv-v">760 × 1000</span></div>
+        <div class="kv"><span class="kv-k">大小</span><span class="kv-v">${c.src ? '102 KB' : '50 KB'}</span></div>
+        <div class="kv"><span class="kv-k">修改</span><span class="kv-v">2026-11-26</span></div>
+      </div>
+
+      ${withMatch ? `<div class="sect">
+        <div class="sect-title">匹配依据</div>
+        <div class="reason"><i></i>缩略图指纹距离 0 / 64</div>
+        <div class="reason"><i></i>ORB 特征匹配 96.6%</div>
+      </div>` : ''}
+
+      <div class="btn-row">
+        <button class="btn btn-dark">打开所在位置</button>
+        <button class="btn btn-ghost">复制路径</button>
+      </div>
+
+      <div class="sect">
+        <div class="sect-title">同一画面的其他文件 (1)</div>
+        <div class="group-item">
+          <div class="group-thumb ${phCls(c.ph)}"></div>
+          <div>
+            <div class="group-name">${c.pairName}</div>
+            <div class="group-sub">${c.pairSub}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>`;
+}
+
+function buildApp(host, state) {
+  const list = state === 'search' ? CARDS : BROWSE_CARDS;
+  const sel = 0;
+  host.innerHTML = `
+    <div class="app">
+      ${topbar(state)}
+      <aside class="side">${SIDE}</aside>
+      <main class="main">
+        ${MAIN_HEAD(state)}
+        <div class="grid-wrap">
+          <div class="grid">
+            ${list.map((c, i) => cardHTML(c, i, state === 'search' ? sel : -1)).join('')}
+          </div>
+        </div>
+      </main>
+      ${detailHTML(state === 'search' ? CARDS[0] : BROWSE_CARDS[1],
+                   state === 'search')}
+    </div>`;
+}
+
+if (SHOT) {
+  const host = document.getElementById('fshot');
+  buildApp(host, SHOT === 'search' ? 'search' : 'browse');
+  host.style.transform = 'none';
+} else {
+  buildApp(document.getElementById('f1'), 'browse');
+  buildApp(document.getElementById('f2'), 'search');
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.frame-scale').forEach(fitFrame);
+  });
+}
+</script>
+</body>
+</html>

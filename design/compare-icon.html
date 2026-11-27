@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>品牌图标对比 — 改前 / 改后</title>
+<style>
+:root {
+  --ink: #0E0E0E;
+  --ink-60: #6A6A6A;
+  --ink-40: #9A9A9A;
+  --surface: #FFFFFF;
+  --surface-2: #F7F7F7;
+  --line: #ECECEC;
+  --line-3: #D2D2D2;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: #EDEDED; color: var(--ink);
+  font-family: var(--font); font-size: 13px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 1520px; margin: 0 auto; padding: 36px 36px 72px; }
+
+.head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 26px; }
+.head h1 { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.head p { font-size: 12px; color: var(--ink-60); padding-bottom: 4px; }
+
+.card {
+  background: var(--surface); border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(14,14,14,.04);
+  padding: 22px; margin-bottom: 18px;
+}
+.card-h {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-3);
+}
+.card-h h2 { font-size: 15px; font-weight: 600; }
+.card-h span { font-size: 12px; color: var(--ink-40); }
+.card-h em {
+  margin-left: auto; font-style: normal; font-size: 11px;
+  color: var(--ink-40);
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+/* ---- 图标特写对比 ---- */
+.icon-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.icon-box {
+  border-radius: 14px; overflow: hidden;
+  background: #F2F2F2; border: 1px solid var(--line);
+}
+.icon-box img { display: block; width: 100%; }
+.icon-cap {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: var(--surface);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.icon-cap b { font-weight: 600; }
+.icon-cap .bad {
+  color: #A34A3A;
+}
+.icon-cap .ok { color: #2F6E5E; }
+
+/* ---- 整屏对比 ---- */
+.frames { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.frame {
+  border-radius: 14px; overflow: hidden;
+  background: #F2F2F2; border: 1px solid var(--line);
+}
+.frame img { display: block; width: 100%; }
+.frame-cap {
+  padding: 10px 14px; background: var(--surface);
+  border-top: 1px solid var(--line);
+  font-size: 12px; font-weight: 500;
+}
+
+/* ---- 差异表 ---- */
+table.diff { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.diff th {
+  text-align: left; font-weight: 600; color: var(--ink-40);
+  font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 0 0 10px; border-bottom: 1px solid var(--line-3);
+}
+table.diff td { padding: 11px 0; border-bottom: 1px solid var(--line); }
+table.diff td:first-child { color: var(--ink-60); width: 150px; }
+table.diff tr:last-child td { border-bottom: none; }
+.sw {
+  display: inline-block; width: 14px; height: 14px;
+  border-radius: 4px; vertical-align: -3px; margin-right: 6px;
+  border: 1px solid rgba(14,14,14,.12);
+}
+.mono { font-family: "SF Mono", Consolas, monospace; font-size: 11px; }
+
+/* ---- 放大镜 ---- */
+.zoom-wrap { position: relative; }
+.zoom-lens {
+  position: absolute; width: 200px; height: 200px;
+  border-radius: 50%; border: 2px solid var(--ink);
+  pointer-events: none; display: none;
+  background-repeat: no-repeat;
+  box-shadow: 0 8px 32px rgba(14,14,14,.24);
+  z-index: 10;
+}
+.zoom-wrap:hover .zoom-lens { display: block; }
+
+.note {
+  font-size: 12px; color: var(--ink-60); line-height: 1.75;
+}
+.note b { color: var(--ink); font-weight: 600; }
+.note ul { margin: 8px 0 0; padding-left: 17px; }
+.note li { margin: 5px 0; }
+.note code {
+  font-family: "SF Mono", Consolas, monospace; font-size: 11px;
+  background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
+}
+
+.pass {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 11px; border-radius: 999px;
+  background: var(--ink); color: #fff;
+  font-size: 11px; font-weight: 600;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="head">
+    <h1>品牌图标对比</h1>
+    <p>只改了这一处 —— 其余全部保持上一版</p>
+  </div>
+
+  <!-- 1. 图标特写 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>顶栏图标 · 特写</h2>
+      <span>同一位置、同一尺寸，只有图标本身换了</span>
+      <em>26 × 26 CSS px · 放大 5 倍</em>
+    </div>
+    <div class="icon-pair">
+      <div class="icon-box">
+        <img src="shots/cmp/mark-before.png" alt="改前">
+        <div class="icon-cap">
+          <b>改前</b>
+          <span class="bad">黑底白线稿（我自绘的占位）</span>
+        </div>
+      </div>
+      <div class="icon-box">
+        <img src="shots/cmp/mark-after.png" alt="改后">
+        <div class="icon-cap">
+          <b>改后</b>
+          <span class="ok">web/icon.png 真彩色原图</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" style="margin-top:16px">
+      改前那个黑方块是<b>我自绘的占位</b>，不是产品图标。当时为了让界面统一走灰阶，
+      把图标也做成了黑白单色线稿 —— 这是错的：<b>图标是产品身份，不是界面装饰</b>，
+      单色化会把识别度丢掉。
+    </p>
+    <p class="note" style="margin-top:8px">
+      改后直接引用 <code>web/icon.png</code>（512×512 原图），
+      绿色 <span class="mono">#00CA73</span> 底 + 白色放大镜 + 黄色太阳点。
+      这是程序真正在用的那个图标文件，不是另做的。
+    </p>
+  </div>
+
+  <!-- 3. 差异明细 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>逐项差异</h2>
+      <span>这一版只动了图标一处</span>
+    </div>
+    <table class="diff">
+      <tr><th>项</th><th>改前</th><th>改后</th></tr>
+      <tr>
+        <td>顶栏品牌图标</td>
+        <td><span class="sw" style="background:#0E0E0E"></span>黑底 <span class="mono">#0E0E0E</span> + 白色线稿</td>
+        <td><span class="sw" style="background:#00CA73"></span>绿底 <span class="mono">#00CA73</span> + 真实图形</td>
+      </tr>
+      <tr>
+        <td>图标来源</td>
+        <td>自绘 SVG 占位（一个 P 加一个圆点）</td>
+        <td><span class="mono">web/icon.png</span>（程序实际用的图标）</td>
+      </tr>
+      <tr>
+        <td>圆角</td>
+        <td>9px</td>
+        <td>8px（贴合原图自带圆角）</td>
+      </tr>
+      <tr>
+        <td>尺寸</td>
+        <td>26 × 26</td>
+        <td>26 × 26（没变）</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="padding-top:16px; color:var(--ink-40);
+            font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+            border-bottom:1px solid var(--line-3)">
+          以下全部未改动
+        </td>
+      </tr>
+      <tr><td>选中态</td><td>投影抬升 + 右下对勾 + 名字加重</td><td>同左</td></tr>
+      <tr><td>对勾徽章</td><td>黑底白勾</td><td>同左</td></tr>
+      <tr><td>源文件徽章</td><td>黑底白字</td><td>同左</td></tr>
+      <tr><td>颜色色点</td><td>放大 1.2x + 白隔离环 + 外投影</td><td>同左</td></tr>
+      <tr><td>色相滑块</td><td>白圆 + 双层投影</td><td>同左</td></tr>
+      <tr><td>单选框</td><td>只显示内部实心点</td><td>同左</td></tr>
+      <tr><td>灰阶 / 圆角 / 字号 / 三栏宽度</td><td>见 v2 规范</td><td>同左</td></tr>
+    </table>
+  </div>
+
+  <!-- 4. 说明 -->
+  <div class="card">
+    <div class="card-h">
+      <h2>我上一轮理解错了什么</h2>
+    </div>
+    <p class="note">
+      你说「图标不要改成黑色的」，我先改的是界面里的<b>功能图标</b>：
+      选中对勾、源文件徽章、单选框。那些改动<b>已经全部撤回</b>，
+      现在和昨天给你看的一致。
+    </p>
+    <p class="note" style="margin-top:8px">
+      你指的是<b>应用图标</b> —— 就是任务栏 / 窗口左上角那个。
+      原来那个黑方块是我为了统一灰阶自绘的占位，不该单色化。
+    </p>
+    <p class="note" style="margin-top:12px">
+      <span class="pass">现在待你确认</span>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

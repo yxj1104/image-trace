@@ -1,41 +1,63 @@
-/* 自绘控件层。所有原生外观的控件都在这里被替换。 */
+/* ============================================================
+   溯源 v2 — 布局与组件
+   所有原生外观的控件都在这里被替换：下拉、勾选框、spinner、
+   取色器、滚动条、tooltip、alert。
+
+   设计约束（改样式前先读）：
+   1. 界面只有灰阶，颜色只来自内容（用户缩略图）。唯一例外是
+      OCR 命中框的橙红 —— 标注类元素首要指标是任何底色上都能认出。
+   2. 选中态不用描边。用投影抬升 + 标记，不给卡片加边框。
+   3. 圆角：卡片 18 / 面板 22 / 缩略图 14（差 4px 形成同心）。
+   4. 字号只用 theme.css 里的 6 级，最小 11px。
+   ============================================================ */
 
 /* ============ 布局骨架 ============ */
 
 #app {
   display: grid;
-  grid-template-rows: var(--h-top) 2px 1fr;
   grid-template-columns: var(--w-side) 1fr auto;
+  /* 第二行写 minmax(0,1fr)。只写 1fr 时最小值是 auto，
+     内容超高会把行撑破视口。 */
+  grid-template-rows: var(--h-top) minmax(0, 1fr);
   grid-template-areas:
     "top top top"
-    "idxbar idxbar idxbar"
     "side main detail";
+  gap: var(--gap);
+  padding: var(--gap);
   height: 100vh;
   width: 100vw;
+  background: var(--canvas);
+  position: relative;
 }
 
-#top { grid-area: top; }
-#idxbar { grid-area: idxbar; }
-#side { grid-area: side; }
-#main { grid-area: main; }
+#top   { grid-area: top; }
+#side  { grid-area: side; }
+#main  { grid-area: main; }
 #detail { grid-area: detail; }
 
-/* 顶栏下方的索引进度条，空闲时不可见 */
+/* 索引进度条：空闲时不可见。绝对定位挂在顶栏下沿，
+   不占 grid 行，所以不会因为它的存在改变布局高度。 */
 #idxbar {
-  background: var(--line);
+  position: absolute;
+  left: calc(var(--gap) + var(--r-xl));
+  right: calc(var(--gap) + var(--r-xl));
+  top: calc(var(--gap) + var(--h-top) - 3px);
+  height: 2px;
+  border-radius: var(--r-full);
+  background: transparent;
   overflow: hidden;
   opacity: 0;
   transition: opacity .2s;
+  z-index: 31;
 }
 
-#idxbar.on {
-  opacity: 1;
-}
+#idxbar.on { opacity: 1; }
 
 .idxbar-fill {
   height: 100%;
   width: 0;
-  background: var(--accent);
+  border-radius: var(--r-full);
+  background: var(--ink);
   transition: width .3s ease;
 }
 
@@ -44,55 +66,81 @@
 #top {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--bg-panel);
+  gap: 10px;
+  padding: 0 8px 0 14px;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-1);
   position: relative;
   z-index: 30;
 }
 
 .brand {
   display: flex;
-  align-items: baseline;
-  gap: 7px;
+  align-items: center;
+  gap: 9px;
+  margin-right: 6px;
   user-select: none;
+  flex: none;
+}
+
+/* 品牌图标用应用真实图标。不做单色处理 —— 图标是产品身份，
+   不是界面装饰，灰阶化会丢掉识别度。 */
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: block;
+  flex: none;
+  object-fit: cover;
 }
 
 .brand-name {
-  font-size: var(--fs-lg);
-  font-weight: 500;
-  letter-spacing: .5px;
+  font-size: var(--fs-15);
+  font-weight: 600;
+  letter-spacing: -.01em;
+  line-height: 1.2;
 }
 
 .brand-sub {
-  font-size: var(--fs-xs);
-  color: var(--text-3);
-  letter-spacing: .3px;
+  font-size: var(--fs-11);
+  color: var(--ink-40);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-left: -3px;
 }
+
+/* ---- 搜索框 ---- */
 
 .searchbox {
   position: relative;
-  flex: 1;
-  max-width: 400px;
-  height: 34px;
+  /* 顶栏改成 flex:1 之后这里不再写固定宽 —— 搜索框吃掉品牌和分段控件
+     之间的全部剩余空间，窗口变宽时优先长它（用户最常操作的地方）。 */
+  flex: 1 1 auto;
+  min-width: 240px;
+  max-width: 640px;
+  height: 38px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px;
-  border: 1px solid var(--line-input);
-  border-radius: var(--r-md);
-  background: var(--bg);
-  transition: border-color .15s, box-shadow .15s;
+  /* 右侧只留 5px：拖图胶囊要贴到框的右边缘内侧，
+     留 14px 会让胶囊看起来浮在中间 */
+  padding: 0 5px 0 14px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  transition: background-color .16s, border-color .16s;
 }
 
+.searchbox:hover { background: var(--surface-3); }
+
 .searchbox:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-soft);
+  background: var(--surface);
+  border-color: var(--line-3);
 }
 
 .searchbox .sb-icon {
-  color: var(--text-3);
+  color: var(--ink-40);
   flex: none;
 }
 
@@ -102,69 +150,67 @@
   border: none;
   outline: none;
   background: none;
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-13);
+  color: var(--ink);
 }
 
-.searchbox input::placeholder {
-  color: var(--text-3);
-}
+.searchbox input::placeholder { color: var(--ink-40); }
 
 .sb-clear {
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-full);
   display: grid;
   place-items: center;
-  color: var(--text-3);
+  color: var(--ink-40);
   flex: none;
+  transition: background-color .14s, color .14s;
 }
 
 .sb-clear:hover {
-  background: var(--bg-hover);
-  color: var(--text);
+  background: var(--surface-4);
+  color: var(--ink);
 }
 
 .sb-panel {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: var(--surface);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-pop);
-  padding: 4px;
+  box-shadow: var(--sh-3);
+  padding: 6px;
   z-index: 120;
   display: none;
   max-height: 320px;
   overflow-y: auto;
 }
 
-.sb-panel.open {
-  display: block;
-}
+.sb-panel.open { display: block; }
 
 .sb-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 28px;
-  padding: 0 8px;
+  height: 32px;
+  padding: 0 10px;
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-12);
   cursor: pointer;
-  color: var(--text);
+  color: var(--ink-80);
+  transition: background-color .12s;
 }
 
 .sb-item:hover,
 .sb-item.on {
-  background: var(--bg-hover);
+  background: var(--surface-2);
+  color: var(--ink);
 }
 
 .sb-item-kind {
-  font-size: 9.5px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   flex: none;
 }
 
@@ -176,284 +222,317 @@
 }
 
 .sb-item-count {
-  font-size: 9.5px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   flex: none;
+  font-variant-numeric: tabular-nums;
 }
 
+/* 命中的词在建议里加粗，不用颜色 —— 灰阶下靠字重区分 */
 .sb-hit {
-  color: var(--accent);
-  font-weight: 500;
+  color: var(--ink);
+  font-weight: 600;
 }
 
-.dropzone {
+/* ---- 查询图（拖图入口，嵌在搜索框内右侧）----
+   原来它是顶栏里独立的一格（.dropzone，148px）。顶栏挤了 9 个元素，
+   1440 才勉强放下 —— 把「拖图」这种输入手段并进搜索框，是同一个
+   输入区的两种方式，不该占两格。
+
+   视觉上做成搜索框内的白色胶囊：外框是浅灰底（--surface-2），
+   胶囊是白底 + 极淡描边，读起来像「框里的按钮」。 */
+
+.dz-chip {
   flex: none;
-  width: 168px;
-  height: 34px;
-  border: 1px dashed var(--line-input);
-  border-radius: var(--r-md);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 8px 0 10px;
-  color: var(--text-3);
-  font-size: var(--fs-sm);
-  transition: border-color .15s, background-color .15s, color .15s;
-  cursor: pointer;
-  user-select: none;
-  position: relative;
-  overflow: hidden;
-}
-
-.dz-empty {
+  height: 30px;
+  max-width: 40%;
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
-  min-width: 0;
-  justify-content: center;
+  padding: 0 10px;
+  border-radius: var(--r-full);
+  /* 白底 + 描边：和搜索框底色拉开一层，但不用阴影，
+     阴影会让它在框里看起来是浮起来的，太重 */
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--ink-60);
+  font-size: var(--fs-12);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: background-color .16s, box-shadow .16s, color .16s;
 }
 
-/* 缩略图：占满整个框的左侧，去掉边框让它像预览窗 */
-.dropzone .dz-thumb {
+.dz-chip:hover:not(.has-image) {
+  box-shadow: inset 0 0 0 1px var(--line-3);
+  color: var(--ink);
+}
+
+/* 图标和文字的容器。放在这里而不是 dz-chip 上，
+   是因为有图时要整块换成缩略图 + 文件名 */
+.dz-chip-idle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.dz-chip-idle svg { flex: none; }
+
+.dz-chip .dz-thumb {
   display: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-full);
   object-fit: cover;
   flex: none;
-  background: var(--bg-sunken);
+  background: var(--surface-3);
 }
 
-.dropzone .dz-info {
+.dz-chip .dz-name {
   display: none;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
-  line-height: 1.25;
-}
-
-.dz-name {
-  font-size: 11px;
-  color: var(--text);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 文件名是「主名 + 版本 + 后缀」，截断要留后缀，
+     所以从右侧开始排（rtl）再靠左对齐 */
   direction: rtl;
   text-align: left;
+  min-width: 0;
 }
 
-.dz-state {
-  font-size: 10px;
-  color: var(--accent);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* 状态文字（比对中 / 已搜到 N 个）在胶囊里放不下，交给右上角状态区。
+   元素保留在 DOM 里，脚本继续更新，只是不显示。 */
+.dz-chip .dz-state { display: none; }
 
-.dropzone .dz-clear {
+.dz-chip .dz-clear {
   display: none;
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-full);
   place-items: center;
-  color: var(--accent);
-  background: none;
-  transition: background-color .12s, color .12s;
+  color: var(--ink-40);
+  flex: none;
+  transition: background-color .14s, color .14s;
 }
 
-.dropzone.has-image {
-  border-style: solid;
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent);
-  width: 208px;
-  height: 42px;
+.dz-chip .dz-clear:hover {
+  background: var(--surface-4);
+  color: var(--ink);
+}
+
+.dz-chip.has-image {
   cursor: default;
-  padding-right: 20px;      /* 给右上角的 × 让位 */
+  padding: 0 4px 0 4px;
+  gap: 7px;
 }
 
-.dropzone.has-image .dz-thumb,
-.dropzone.has-image .dz-info {
-  display: flex;
+.dz-chip.has-image .dz-thumb,
+.dz-chip.has-image .dz-name { display: block; }
+.dz-chip.has-image .dz-chip-idle { display: none; }
+.dz-chip.has-image .dz-clear { display: grid; }
+
+/* 比对中：描边呼吸。不用 spinner —— 30px 高的胶囊里转圈太小看不清，
+   而且右上角的状态点已经在动，两处同时动会显得晃。 */
+.dz-chip.has-image.busy {
+  box-shadow: inset 0 0 0 1px var(--ink-25);
+  animation: dz-breathe 1.2s ease-in-out infinite;
 }
 
-.dropzone.has-image .dz-empty {
-  display: none;
+@keyframes dz-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 1px var(--ink-25); }
+  50%      { box-shadow: inset 0 0 0 1px var(--ink-40); }
 }
 
-.dropzone.has-image .dz-clear {
-  display: grid;
-}
-
-.dropzone.has-image .dz-clear:hover {
-  background: var(--accent);
-  color: #fff;
-}
-
-.dropzone.has-image .dz-state {
-  color: var(--accent);
-}
-
-.dropzone.has-image.busy .dz-state {
-  color: var(--amber);
-}
-
-.dropzone.has-image .dz-state.err {
-  color: var(--warn);
-}
-
-.dropzone:hover:not(.has-image) {
-  border-color: var(--accent-line);
-  background: var(--bg);
-  color: var(--text-2);
-}
-
-.dropzone.dragover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
+/* 这个类不会被触发：整窗拖拽时 #dropmask（z-index 300）盖住了顶栏，
+   胶囊根本露不出来。留在这里会让人以为拖到胶囊上有额外反馈，
+   实际没有。真正生效的是 #dropmask 的整屏提示。 */
 
 .top-spacer { flex: 1; }
+
+/* ---- 状态 ---- */
 
 .status {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: var(--fs-sm);
-  color: var(--text-2);
+  padding: 0 12px 0 4px;
+  font-size: var(--fs-12);
+  color: var(--ink-60);
   user-select: none;
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
+  white-space: nowrap;
   flex: none;
 }
 
-.status-dot.idle { background: var(--text-3); }
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--ink);
+  opacity: .85;
+  flex: none;
+}
+
+/* 空闲只表示「系统在」，用浅灰；
+   忙碌时才是不透明的黑 + 呼吸，让它成为唯一在动的元素。 */
+.status-dot.idle {
+  background: var(--ink-25);
+  opacity: 1;
+}
+
 .status-dot.busy {
-  background: var(--amber);
+  background: var(--ink);
+  opacity: 1;
   animation: pulse 1.1s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: .35; }
+  50%      { opacity: .3; }
 }
 
 /* ============ 左侧筛选 ============ */
 
 #side {
-  border-right: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-1);
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .side-scroll {
   flex: 1;
-  padding: 14px 0 20px;
+  /* 底部留白 8px 而不是 14：七个分组各紧 1px + 这里 6px，
+     正好把 1360×880 窗口下最后 17px 的溢出收掉。 */
+  padding: 4px 0 8px;
   min-height: 0;
 }
 
 .fgroup {
-  padding: 0 14px 14px;
+  padding: 9px 18px 3px;
 }
 
+/* 分组之间的分隔线。间距从 5+12 收到 3+10 —— 七个分组累计省下
+   约 45px，1360×880 的窗口下侧栏正好不需要滚动就能看到「显示」。
+   再紧就分不清分组边界了，这是下限。 */
 .fgroup + .fgroup {
   border-top: 1px solid var(--line);
-  padding-top: 13px;
+  margin-top: 3px;
+  padding-top: 10px;
 }
 
 .fgroup-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   user-select: none;
 }
 
+/* 分组标题：小号大写风格，靠字距和浅灰拉开层级，
+   不靠加粗和颜色 */
 .fgroup-title {
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  color: var(--text-2);
-  letter-spacing: .4px;
+  font-size: var(--fs-11);
+  font-weight: 600;
+  color: var(--ink-40);
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
 .fgroup-reset {
-  font-size: 10.5px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   opacity: 0;
-  transition: opacity .15s;
+  transition: opacity .15s, color .15s;
 }
 
 .fgroup:hover .fgroup-reset.active { opacity: 1; }
-.fgroup-reset:hover { color: var(--accent); }
+.fgroup-reset:hover { color: var(--ink); }
 
 /* ---- 自绘单选 ---- */
 
 .radio-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 0;
+  /* 14px 圆环 + 9px 间距。间距保持 9：圆环从 13 加到 14 之后，
+     文字左边缘从 52 变成 53，仍在同一列，肉眼无差。 */
+  gap: 9px;
+  height: 29px;
+  /* 内外边距一正一负：hover 背景能铺到面板边缘，
+     文字仍与分组标题对齐。hack 但省一层包裹。 */
+  padding: 0 10px;
+  margin: 0 -10px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   user-select: none;
+  font-size: var(--fs-13);
+  color: var(--ink-80);
+  transition: background-color .14s, color .14s;
+}
+
+.radio-row:hover { background: var(--surface-2); }
+
+.radio-row.on {
+  color: var(--ink);
+  font-weight: 500;
 }
 
 .radio-dot {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 1px solid var(--line-input);
+  /* 14px 外径 / 1px 描边 → 内径 12px。黑点 6px，留白 (12-6)/2 = 3px，
+     正好整数。
+     
+     **原来是 13px / 1.5px 描边 → 内径 10px，(10-6)/2 = 2px**，但
+     1.5px 描边在 1x 屏上被舍入成 1px 或 2px，内径变成 11 或 9，
+     留白就成了 2.5px 或 1.5px —— 半像素被浏览器往右下舍入，实测
+     黑点相对环心偏 +0.5px（6 倍放大图上量到 +3px）。这就是「左侧
+     黑点没对齐」的实际成因。
+     
+     把外径改成 14、描边收成 1px，所有数都是整数，不再有舍入。 */
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--ink-25);
   flex: none;
   display: grid;
   place-items: center;
-  transition: border-color .12s;
+  transition: border-color .14s;
 }
 
-.radio-row:hover .radio-dot {
-  border-color: var(--text-3);
-}
+.radio-row:hover .radio-dot { border-color: var(--ink-40); }
 
-.radio-row.on .radio-dot {
-  border-color: var(--accent);
-}
-
+/* 选中时不加深外环（那等于描边），只把内部实心点显出来 */
 .radio-dot::after {
   content: "";
   width: 6px;
   height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
+  border-radius: var(--r-full);
+  background: var(--ink);
   transform: scale(0);
-  transition: transform .12s;
+  transition: transform .14s;
 }
 
-.radio-row.on .radio-dot::after {
-  transform: scale(1);
-}
+.radio-row.on .radio-dot::after { transform: scale(1); }
 
 .radio-label {
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-13);
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .radio-count {
-  font-size: 10.5px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   font-variant-numeric: tabular-nums;
+  flex: none;
 }
 
 /* ---- 自绘多选标签 ---- */
@@ -461,89 +540,91 @@
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: var(--r-sm);
-  background: var(--bg-sunken);
-  font-size: 10.5px;
-  color: var(--text-2);
+  gap: 5px;
+  height: 27px;
+  padding: 0 10px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  font-size: var(--fs-11);
+  font-weight: 500;
+  color: var(--ink-60);
+  letter-spacing: .02em;
   cursor: pointer;
   user-select: none;
-  transition: background-color .12s, color .12s;
-  border: 1px solid transparent;
+  transition: background-color .14s, color .14s;
 }
 
 .chip:hover {
-  background: var(--bg-hover);
-  color: var(--text);
+  background: var(--surface-3);
+  color: var(--ink);
 }
 
 .chip.on {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--accent-line);
+  background: var(--ink);
+  color: #fff;
 }
 
 .chip-count {
-  color: var(--text-3);
+  color: var(--ink-40);
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 
-.chip.on .chip-count {
-  color: var(--accent-line);
-}
+.chip.on .chip-count { color: rgba(255, 255, 255, .6); }
 
 /* ---- 自绘目录树 ---- */
 
-.tree {
-  font-size: var(--fs-sm);
-}
+.tree { font-size: var(--fs-12); }
 
 .tree-node {
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 24px;
-  padding-right: 6px;
+  gap: 6px;
+  height: 27px;
+  /* 基距 10px 让 hover 背景铺到面板边缘；层级缩进用 --depth 叠加，
+     depth 0 = 0，与分组标题左对齐；每层 +16px。 */
+  padding-left: calc(10px + var(--depth, 0) * 16px);
+  padding-right: 10px;
+  margin-left: -10px;
+  margin-right: -10px;
   border-radius: var(--r-sm);
   cursor: pointer;
   user-select: none;
-  color: var(--text-2);
+  color: var(--ink-80);
+  transition: background-color .14s, color .14s;
 }
 
-.tree-node:hover {
-  background: var(--bg-hover);
-}
+.tree-node:hover { background: var(--surface-2); }
 
 .tree-node.on {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--surface-3);
+  color: var(--ink);
+  font-weight: 500;
 }
 
+/* 三角箭头。用 SVG 不用 ▸ 字形 —— 字形落在行高基线上，
+   小尺寸格子里会被挤到底部（实测偏 4.2px）。 */
 .tree-twist {
   width: 12px;
   height: 12px;
   flex: none;
   display: grid;
   place-items: center;
-  color: var(--text-3);
-  transition: transform .12s;
+  color: var(--ink-40);
+  transition: transform .16s;
 }
 
-.tree-twist.open {
-  transform: rotate(90deg);
-}
+.tree-twist svg { display: block; }
+.tree-twist.open { transform: rotate(90deg); }
 
-.tree-twist.leaf {
-  visibility: hidden;
-}
+/* 叶子节点不显示箭头，但保留占位，否则同级的名字会错开 */
+.tree-twist.leaf { visibility: hidden; }
 
 .tree-name {
   flex: 1;
@@ -553,9 +634,10 @@
 }
 
 .tree-count {
-  font-size: 10px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   font-variant-numeric: tabular-nums;
+  flex: none;
 }
 
 /* ---- 自绘区间输入 ---- */
@@ -564,23 +646,27 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-bottom: 6px;
 }
+
+.range-row:last-child { margin-bottom: 0; }
 
 .num-box {
   flex: 1;
-  height: 26px;
-  border: 1px solid var(--line-input);
+  height: 30px;
   border-radius: var(--r-sm);
   display: flex;
   align-items: center;
-  padding: 0 7px;
-  background: var(--bg);
-  transition: border-color .12s;
+  gap: 5px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  transition: background-color .14s, box-shadow .14s;
   min-width: 0;
 }
 
 .num-box:focus-within {
-  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-3);
 }
 
 .num-box input {
@@ -588,11 +674,15 @@
   border: none;
   outline: none;
   background: none;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-12);
   min-width: 0;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
+.num-box input::placeholder { color: var(--ink-40); }
+
+/* 干掉原生上下箭头。视觉上的步进由 .stepper 自绘。 */
 .num-box input::-webkit-outer-spin-button,
 .num-box input::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -605,30 +695,36 @@
 }
 
 .num-unit {
-  font-size: 10px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   flex: none;
 }
 
 .range-sep {
-  color: var(--text-3);
-  font-size: 11px;
+  color: var(--ink-25);
+  font-size: var(--fs-11);
   flex: none;
 }
 
-/* ---- 自绘步进（替代 spinner）---- */
+/* ---- 自绘步进 ----
+   结构：输入框 + 右侧上下两个箭头（竖直堆叠）。
+   不用原生 spinner，不用 ±  按钮 —— 横向空间在 272px 侧栏里不够。 */
 
 .stepper {
   display: flex;
-  align-items: stretch;
-  border: 1px solid var(--line-input);
+  align-items: center;
+  height: 30px;
+  padding: 0 4px 0 10px;
   border-radius: var(--r-sm);
-  height: 26px;
-  overflow: hidden;
+  background: var(--surface-2);
+  min-width: 0;
+  flex: 1;
+  transition: background-color .14s, box-shadow .14s;
 }
 
 .stepper:focus-within {
-  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-3);
 }
 
 .stepper input {
@@ -637,11 +733,12 @@
   border: none;
   outline: none;
   background: none;
-  padding: 0 6px;
-  font-size: var(--fs-sm);
-  text-align: center;
+  font-size: var(--fs-11);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+
+.stepper input::placeholder { color: var(--ink-40); }
 
 .stepper input::-webkit-outer-spin-button,
 .stepper input::-webkit-inner-spin-button {
@@ -654,51 +751,65 @@
   appearance: textfield;
 }
 
+/* 两个箭头竖直堆叠，各 16×11。 */
+.stepper-arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: none;
+}
+
 .stepper-btn {
-  width: 18px;
+  width: 16px;
+  height: 11px;
+  /* 3px 而非规范下限 6px：16×11 的小格子里 6px 会显得过圆，
+     箭头看起来像一团。这类微型元件统一用 3px。 */
+  border-radius: 3px;
   display: grid;
   place-items: center;
-  color: var(--text-3);
+  color: var(--ink-40);
   flex: none;
-  background: var(--bg-sunken);
   user-select: none;
+  transition: background-color .14s, color .14s;
 }
+
+.stepper-btn svg { display: block; }
 
 .stepper-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text);
+  background: var(--surface-4);
+  color: var(--ink);
 }
 
-.stepper-btn:active {
-  background: var(--line);
-}
+.stepper-btn:active { background: var(--line-3); }
 
 /* ---- 自绘色环 ---- */
 
 .color-ring {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .color-dot {
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
+  width: 21px;
+  height: 21px;
+  border-radius: var(--r-full);
   cursor: pointer;
-  border: 1.5px solid transparent;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .07);
-  transition: transform .1s;
   flex: none;
+  box-shadow: inset 0 0 0 1px rgba(14, 14, 14, .10);
+  transition: transform .14s, box-shadow .14s;
 }
 
-.color-dot:hover {
-  transform: scale(1.12);
-}
+.color-dot:hover { transform: scale(1.08); }
 
+/* 选中同样不用描边：放大 + 白色隔离环 + 柔和外投影。
+   外投影读成「浮起来」，实线环还是描边。 */
 .color-dot.on {
-  border-color: var(--text);
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--text);
+  transform: scale(1.2);
+  box-shadow: inset 0 0 0 1px rgba(14, 14, 14, .10),
+              0 0 0 2px var(--surface),
+              0 2px 8px rgba(14, 14, 14, .26);
 }
 
 /* ---- 自绘颜色选择器面板 ---- */
@@ -706,38 +817,34 @@
 .color-picker-btn {
   display: flex;
   align-items: center;
-  gap: 7px;
-  height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--line-input);
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  color: var(--text-2);
+  background: var(--surface-2);
+  font-size: var(--fs-12);
+  color: var(--ink-60);
   width: 100%;
+  transition: background-color .14s;
 }
 
-.color-picker-btn:hover {
-  border-color: var(--text-3);
-}
+.color-picker-btn:hover { background: var(--surface-3); }
 
 .cp-swatch {
-  width: 13px;
-  height: 13px;
-  border-radius: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
   flex: none;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1);
+  box-shadow: inset 0 0 0 1px rgba(14, 14, 14, .12);
 }
 
-.cp-panel {
-  padding: 10px;
-  width: 208px;
-}
+.cp-panel { padding: 12px; width: 216px; }
 
 .cp-sliders {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  margin-bottom: 9px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .cp-slider-row {
@@ -747,15 +854,15 @@
 }
 
 .cp-slider-label {
-  font-size: 10px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   width: 11px;
   flex: none;
 }
 
 .slider {
   flex: 1;
-  height: 14px;
+  height: 16px;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -764,19 +871,24 @@
 }
 
 .slider-track {
-  height: 4px;
-  border-radius: 2px;
+  height: 6px;
+  border-radius: var(--r-full);
   width: 100%;
   position: relative;
+  /* 默认轨道底色。容差滑块没有渐变（createSlider 的 track 参数为 null），
+     之前完全透明，看起来只有一颗悬空的圆点。 */
+  background: var(--surface-4);
 }
 
+/* 滑块：白圆 + 双层投影，不用深色描边 */
 .slider-thumb {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--bg);
-  border: 1px solid var(--line-input);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .16);
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  /* 白圆落在彩虹底/明度条上，靠双层阴影脱离背景 */
+  box-shadow: 0 1px 4px rgba(14, 14, 14, .34),
+              0 0 0 1px rgba(14, 14, 14, .06);
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -784,10 +896,10 @@
 }
 
 .cp-preview {
-  height: 20px;
+  height: 22px;
   border-radius: var(--r-sm);
-  margin-bottom: 8px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+  margin-bottom: 10px;
+  box-shadow: inset 0 0 0 1px rgba(14, 14, 14, .08);
 }
 
 /* ---- 自绘开关 ---- */
@@ -795,112 +907,121 @@
 .switch {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   cursor: pointer;
   user-select: none;
   padding: 3px 0;
+  font-size: var(--fs-12);
+  color: var(--ink-80);
 }
 
 .switch-track {
-  width: 26px;
-  height: 15px;
-  border-radius: 8px;
-  background: var(--line-strong);
+  width: 32px;
+  height: 18px;
+  border-radius: var(--r-full);
+  background: var(--surface-4);
   position: relative;
   flex: none;
-  transition: background-color .15s;
+  transition: background-color .18s;
 }
 
-.switch.on .switch-track {
-  background: var(--accent);
-}
+.switch.on .switch-track { background: var(--ink); }
 
 .switch-knob {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
   background: #fff;
-  transition: transform .15s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+  transition: transform .18s;
+  box-shadow: 0 1px 2px rgba(14, 14, 14, .18);
 }
 
-.switch.on .switch-knob {
-  transform: translateX(11px);
-}
+.switch.on .switch-knob { transform: translateX(14px); }
 
 .switch-label {
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-12);
+  color: var(--ink-80);
 }
 
 /* ============ 主区 ============ */
 
+/* 主区本身不画底板：卡片直接浮在画布上，
+   三栏里只有左右两栏是白色面板。 */
 #main {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: var(--bg);
+  background: none;
 }
 
 .main-head {
-  height: 38px;
+  height: 46px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line);
+  padding: 0 6px 0 8px;
   flex: none;
 }
 
-/* 查询拆词提示条。只在「输入被拆成多个词」或「走了人物通道」时出现，
-   单词精确命中时整条隐藏，不占视觉空间。 */
+/* 查询拆词提示条。只在「输入被拆成多个词」或「走了人物通道」时
+   出现，单词精确命中时整条隐藏，不占视觉空间。 */
 .query-hint {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 7px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--bg-panel);
-  font-size: 10.5px;
-  color: var(--text-3);
+  padding: 7px 8px;
+  margin-bottom: 2px;
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   flex: none;
 }
 
-.qh-label {
-  color: var(--text-3);
-  margin-right: 1px;
-}
+.qh-label { color: var(--ink-40); margin-right: 1px; }
 
 .qh-chip {
-  padding: 2px 7px;
-  border-radius: 9px;
-  background: var(--bg-sunken);
-  color: var(--text-2);
-  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  color: var(--ink-80);
+  font-size: var(--fs-11);
   line-height: 1.5;
 }
 
 .qh-note {
   margin-left: 4px;
-  color: var(--accent);
-  font-size: 10.5px;
+  color: var(--ink-60);
+  font-size: var(--fs-11);
 }
 
 .main-title {
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--text-2);
+  font-size: var(--fs-17);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -.01em;
+  /* 主区窄到 530px（1100 窗口 + 详情展开）时，「全部文件」会被拆成
+     「全部文 / 件」两行。标题是这一屏的定位锚点，任何情况下都不能折行。 */
+  white-space: nowrap;
+  flex: none;
 }
 
 .main-count {
-  font-size: var(--fs-xs);
-  color: var(--text-3);
+  font-size: var(--fs-12);
+  color: var(--ink-40);
   font-variant-numeric: tabular-nums;
+  padding: 2px 9px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  /* 计数比标题弱，空间不够时先牺牲它：允许省略号，
+     而不是让它把标题和工具区往两边挤。 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .main-tools {
@@ -921,115 +1042,115 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 25px;
-  padding: 0 8px;
-  border: 1px solid var(--line-input);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-  background: var(--bg);
+  height: 32px;
+  padding: 0 13px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-80);
+  background: var(--surface);
+  transition: background-color .14s;
+  /* 主区被详情面板挤窄时，「最近修改」会折成两行把标题栏撑高。
+     排序器是次要控件，宁可让它被裁，也不让它改变行高。 */
+  white-space: nowrap;
+  flex: none;
 }
 
-.select-btn:hover {
-  border-color: var(--text-3);
-}
+.select-btn:hover { background: var(--surface-2); }
 
 .select-btn .caret {
-  color: var(--text-3);
+  color: var(--ink-40);
   transition: transform .15s;
 }
 
-.select.open .select-btn .caret {
-  transform: rotate(180deg);
-}
+.select.open .select-btn .caret { transform: rotate(180deg); }
 
 .select-panel {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   right: 0;
-  min-width: 132px;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  min-width: 140px;
+  background: var(--surface);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-pop);
-  padding: 4px;
+  box-shadow: var(--sh-3);
+  padding: 6px;
   z-index: 100;
   display: none;
 }
 
-.select.open .select-panel {
-  display: block;
-}
+.select.open .select-panel { display: block; }
 
 .select-item {
   display: flex;
   align-items: center;
   gap: 7px;
-  height: 26px;
-  padding: 0 8px;
+  height: 32px;
+  padding: 0 10px;
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-12);
+  color: var(--ink-80);
   cursor: pointer;
+  transition: background-color .12s;
 }
 
-.select-item:hover {
-  background: var(--bg-hover);
-}
+.select-item:hover { background: var(--surface-2); }
 
 .select-item.on {
-  color: var(--accent);
+  color: var(--ink);
+  font-weight: 500;
 }
 
 .select-check {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   flex: none;
   opacity: 0;
 }
 
-.select-item.on .select-check {
-  opacity: 1;
-}
+.select-item.on .select-check { opacity: 1; }
 
 /* ---- 视图切换 ---- */
 
 .seg {
   display: flex;
-  background: var(--bg-sunken);
-  border-radius: var(--r-sm);
-  padding: 2px;
+  align-items: center;
   gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  flex: none;
 }
 
 .seg-item {
-  height: 21px;
-  padding: 0 9px;
-  border-radius: 3px;
-  font-size: 10.5px;
-  color: var(--text-2);
+  height: 26px;
+  padding: 0 14px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-60);
   display: grid;
   place-items: center;
   user-select: none;
+  white-space: nowrap;
+  transition: background-color .16s, color .16s, box-shadow .16s;
 }
+
+.seg-item:hover { color: var(--ink); }
 
 .seg-item.on {
-  background: var(--bg);
-  color: var(--text);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(14, 14, 14, .10);
 }
 
-/* 搜索模式切换（文件名 / 画面）。比视图切换更紧凑：
-   顶栏横向空间紧张，多一个字就会挤压旁边的搜索框。 */
-.seg.sm {
-  flex: none;
-  padding: 2px;
-}
+/* 顶栏里的搜索模式切换。比视图切换更矮，横向也收紧 ——
+   顶栏横向空间紧张，多一个字就会挤压搜索框。 */
+.seg.sm { padding: 3px; flex: none; }
 
 .seg.sm .seg-item {
   height: 30px;
-  padding: 0 8px;
-  font-size: 10.5px;
+  padding: 0 11px;
+  font-size: var(--fs-12);
 }
 
 /* ---- 结果网格 ---- */
@@ -1037,49 +1158,63 @@
 .grid-wrap {
   flex: 1;
   min-height: 0;
-  padding: 14px 16px 28px;
+  margin: 0 -6px;
+  padding: 6px;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  gap: 14px 12px;
+  /* 200px 起跳：主区在 1440 宽下约 765px，正好排 3 列。
+     再小会让竖版海报的缩略图看不清。 */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  align-content: start;
 }
 
 .grid.list-mode {
   grid-template-columns: 1fr;
-  gap: 1px;
+  gap: 4px;
 }
+
+/* ---- 卡片 ---- */
 
 .card {
   cursor: pointer;
   user-select: none;
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   position: relative;
-  transition: background-color .12s;
+  padding: 8px;
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  transition: box-shadow .18s, transform .18s;
 }
 
 .card:hover {
-  background: var(--bg-sunken);
+  box-shadow: var(--sh-2);
+  transform: translateY(-2px);
 }
 
+/* 选中不用描边：抬升 + 加深投影 + 名字加重 + 缩略图右下对勾。
+   投影半径收在 18px 内（卡片间隙 16px），再大就会糊到邻居身上。 */
 .card.on {
-  background: var(--accent-soft);
+  box-shadow: 0 6px 18px rgba(14, 14, 14, .16),
+              0 1px 4px rgba(14, 14, 14, .08);
+  transform: translateY(-2px);
 }
+
+.card.on .card-name { font-weight: 600; }
 
 .card-thumb {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
-  background: var(--bg-sunken);
+  /* 3:4 贴近竖版海报的真实比例。 */
+  aspect-ratio: 3 / 4;
+  background: var(--surface-3);
+  /* 比卡片圆角小 4px，形成同心倒角 */
   border-radius: var(--r-md);
   overflow: hidden;
   display: grid;
   place-items: center;
-}
-
-.card.on .card-thumb {
-  box-shadow: 0 0 0 1.5px var(--accent);
 }
 
 .card-thumb img {
@@ -1089,88 +1224,117 @@
   display: block;
 }
 
-.card-score {
+/* 对勾徽章：黑底白勾。放在右下角 —— 左上被「源文件」占着，
+   右上被匹配度占着，只有右下是空的。 */
+.sel-check {
+  display: none;
   position: absolute;
-  top: 6px;
-  right: 6px;
-  height: 17px;
-  padding: 0 5px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  display: grid;
-  place-items: center;
-  background: var(--accent);
+  right: 7px;
+  bottom: 7px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-full);
+  background: var(--ink);
   color: #fff;
-  letter-spacing: .2px;
+  box-shadow: 0 1px 4px rgba(14, 14, 14, .28);
+  place-items: center;
 }
 
+.card.on .sel-check { display: grid; }
+
+.card-score {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-full);
+  /* 10px 是规范下限 11px 的唯一例外：20px 高的胶囊里放 11px
+     会顶到上下边缘。字号再大就得把胶囊加高，反而更抢。 */
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, .94);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(14, 14, 14, .14);
+  backdrop-filter: blur(4px);
+}
+
+/* 弱匹配：降透明度，不换颜色 */
 .card-score.weak {
-  background: var(--amber);
+  background: rgba(255, 255, 255, .80);
+  color: var(--ink-60);
 }
 
 .card-score.paired {
-  background: var(--text-2);
+  background: rgba(255, 255, 255, .94);
+  color: var(--ink);
 }
 
 .card-badge {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  height: 17px;
-  padding: 0 5px;
-  border-radius: 3px;
-  font-size: 9.5px;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, .93);
-  color: var(--text-2);
-  letter-spacing: .2px;
+  top: 7px;
+  left: 7px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-full);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, .94);
+  color: var(--ink-60);
+  backdrop-filter: blur(4px);
 }
 
+/* 源文件标记用实心黑：这是整个界面唯一需要「一眼扫到」的标记，
+   靠反白而不是靠颜色。 */
 .card-badge.src {
-  background: var(--accent);
+  background: var(--ink);
   color: #fff;
 }
 
 .card-err {
   position: absolute;
-  bottom: 6px;
-  left: 6px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+  bottom: 7px;
+  left: 7px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-full);
   background: var(--warn-soft);
   color: var(--warn);
   display: grid;
   place-items: center;
-  font-size: 10px;
-  font-weight: 500;
+  font-size: var(--fs-11);
+  font-weight: 600;
 }
 
-.card-meta {
-  padding: 6px 2px 0;
-}
+.card-meta { padding: 9px 4px 3px; }
 
 .card-name {
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 截断时保住扩展名和版本号：从右侧起排再靠左 */
   direction: rtl;
   text-align: left;
 }
 
 .card-sub {
-  font-size: 10.5px;
-  color: var(--text-3);
-  margin-top: 1px;
-  /* 左边说明 + 右边日期。用 flex 而不是把日期塞进同一段文字，
-     这样日期永远贴右对齐，一列卡片纵向扫下来能直接比新旧。 */
   display: flex;
   align-items: baseline;
   gap: 6px;
+  font-size: var(--fs-11);
+  color: var(--ink-40);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .card-sub-t {
@@ -1181,24 +1345,25 @@
   flex: 1;
 }
 
+/* 日期比说明再淡一档，别抢走文件名和内容的注意力 */
 .card-sub-d {
   flex: none;
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  /* 比说明文字再淡一档，避免日期抢走文件名和内容的注意力 */
-  color: var(--text-3);
+  color: var(--ink-40);
   opacity: .82;
 }
 
-/* 列表模式 */
+/* ---- 列表模式 ---- */
 
 .list-mode .card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 8px;
-  border-radius: var(--r-sm);
+  padding: 8px;
+  border-radius: var(--r-md);
 }
+
+.list-mode .card:hover,
+.list-mode .card.on { transform: none; }
 
 .list-mode .card-thumb {
   width: 52px;
@@ -1208,22 +1373,42 @@
   border-radius: var(--r-sm);
 }
 
+/* 列表行里的缩略图用 cover 填满 52×52。
+   沿用网格的 contain 会按原图比例撑高（实测 69px），
+   被 52px 的容器裁成中间一条，只剩半个标题。 */
+.list-mode .card-thumb img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+}
+
 .list-mode .card-score {
   position: static;
   flex: none;
   order: 10;
+  box-shadow: none;
+  background: var(--surface-3);
 }
 
 .list-mode .card-badge {
   position: static;
   order: 9;
   flex: none;
+  box-shadow: none;
 }
 
 .list-mode .card-err {
   position: static;
   order: 11;
   flex: none;
+}
+
+/* 列表模式下对勾移到行尾，不压缩略图 */
+.list-mode .sel-check {
+  position: static;
+  order: 12;
+  flex: none;
+  box-shadow: none;
 }
 
 .list-mode .card-meta {
@@ -1233,10 +1418,9 @@
 }
 
 .list-mode .card-sub {
-  font-size: 10px;
-  /* 列表模式整行很宽，副标题如果撑满，日期会被推到屏幕最右端 ——
-     离内容 900px，中间大片空白，看着像是两列不相干的信息。
-     收窄到 360px，日期就贴在说明文字右侧不远处，仍在一条竖线上。 */
+  /* 整行很宽时副标题如果撑满，日期会被推到屏幕最右端 ——
+     离内容 900px，看起来像两列不相干的信息。
+     收窄后日期贴在说明右侧，仍在一条竖线上。 */
   max-width: 360px;
 }
 
@@ -1249,46 +1433,46 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--text-3);
+  color: var(--ink-40);
   padding: 40px 20px;
   text-align: center;
 }
 
 .empty-title {
-  font-size: var(--fs-lg);
-  color: var(--text-2);
+  font-size: var(--fs-15);
+  font-weight: 600;
+  color: var(--ink-80);
 }
 
 .empty-desc {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-12);
   max-width: 340px;
   line-height: 1.7;
 }
 
 .empty-hint {
-  font-size: var(--fs-xs);
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   margin-top: 2px;
 }
 
-/* ---- 画面搜索的空状态与进度 ---- */
-
 .empty-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-full);
   border: 1px solid var(--line);
-  background: var(--bg-sunken);
+  background: var(--surface);
   display: grid;
   place-items: center;
-  font-size: 16px;
-  color: var(--text-3);
+  font-size: var(--fs-15);
+  color: var(--ink-40);
+  box-shadow: var(--sh-1);
 }
 
 /* 转圈：只用 border 的一半上色，旋转时看起来像进度 */
 .empty-icon.spin {
   border-color: var(--line);
-  border-top-color: var(--accent);
+  border-top-color: var(--ink);
   animation: semspin .9s linear infinite;
 }
 
@@ -1297,22 +1481,23 @@
 }
 
 .empty-desc.small {
-  font-size: 10.5px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   max-width: 380px;
 }
 
 .sem-bar {
   width: 240px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--bg-sunken);
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
   overflow: hidden;
 }
 
 .sem-bar-fill {
   height: 100%;
-  background: var(--accent);
+  border-radius: var(--r-full);
+  background: var(--ink);
   transition: width .4s ease;
 }
 
@@ -1320,59 +1505,64 @@
   grid-column: 1 / -1;
   padding: 60px 0;
   text-align: center;
-  font-size: var(--fs-sm);
-  color: var(--text-3);
+  font-size: var(--fs-12);
+  color: var(--ink-40);
 }
 
 /* ============ 右侧详情 ============ */
 
+/* 详情面板平时宽度为 0（收起）。用 width 过渡而不是 display，
+   这样展开/收起有连续动画。 */
 #detail {
   width: 0;
   overflow: hidden;
-  border-left: 1px solid var(--line);
-  background: var(--bg-panel);
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-1);
   transition: width .18s ease;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 
-#detail.open {
-  width: var(--w-detail);
-}
+#detail.open { width: var(--w-detail); }
 
 .detail-scroll {
   flex: 1;
-  padding: 14px;
+  padding: 8px 8px 20px;
   min-height: 0;
 }
 
 .detail-preview {
   width: 100%;
-  border-radius: var(--r-md);
-  background: var(--bg-sunken);
+  border-radius: var(--r-lg);
+  background: var(--surface-3);
   display: grid;
   place-items: center;
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   /* 竖版海报（比如 750×2677）在 300px 高度里会缩成一条，
-     看不出内容，所以给到 420px。横版图仍然按宽度自适应，不会被拉高。 */
+     看不出内容，所以给到 420px。横版图按宽度自适应，不会被拉高。 */
   height: 420px;
+  padding: 12px;
 }
 
 .detail-preview img {
   max-width: 100%;
   /* 用具体像素而不是 100%：父级是 grid 容器，img 的百分比高度
      解析不到 420px，会按图片原始比例撑开（实测 760px 溢出容器）。 */
-  max-height: 420px;
+  max-height: 396px;
   width: auto;
   height: auto;
   object-fit: contain;
   display: block;
+  border-radius: var(--r-sm);
+  box-shadow: 0 4px 20px rgba(14, 14, 14, .14);
 }
 
-/* 包一层，让框能跟着图片的实际显示区域定位。
-   直接挂在 .detail-preview 上不行 —— 那个容器是固定 420px 高、
+/* 包一层，让命中框跟着图片的实际显示区域定位。
+   直接挂在 .detail-preview 上不行 —— 那个容器固定 420px 高、
    图片在里面居中，四周有留白，框会错位。 */
 .preview-wrap {
   position: relative;
@@ -1387,20 +1577,19 @@
   pointer-events: none;
 }
 
+/* OCR 命中框：唯一保留彩色的地方。
+   用高饱和橙红 + 白色外发光，而不是主题色 —— 标注类元素的首要
+   指标是「任何底色上都能认出」，次要才是和整体配色协调。
+   实测深墨绿在蓝绿系海报上几乎看不见。 */
 .hit-box {
   position: absolute;
-  /* 用高饱和橙红 + 白色外发光，而不是主题绿。
-     实测主题绿 #2F6E5E 在蓝绿色系海报上几乎看不见（商业海报大量用
-     青蓝天色背景）—— 标注类元素的首要指标是「任何底色上都能认出」，
-     次要才是和整体配色协调。 */
   border: 2px solid #FF5C33;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, .85), 0 0 6px rgba(0, 0, 0, .35);
   background: rgba(255, 92, 51, .14);
-  border-radius: 2px;
+  border-radius: var(--r-xs);
   pointer-events: auto;
-  /* 兜底：OCR 给的是归一化坐标，短文本行的高度只有 1% 左右。
-     竖版长海报缩到 121px 宽时，1% 高度不到 5px，纯边框会看不见。
-     加最小尺寸让细行也能辨认。 */
+  /* 兜底：OCR 给的是归一化坐标，短文本行高度只有 1% 左右。
+     竖版长海报缩到 121px 宽时，1% 高度不到 5px，纯边框会看不见。 */
   min-height: 6px;
   min-width: 10px;
 }
@@ -1412,81 +1601,79 @@
 
 /* 悬停列表项时对应框提亮，让「哪段文字在图上哪个位置」能对上 */
 .hit-box.on {
-  border-color: #2F6E5E;
-  background: rgba(47, 110, 94, .3);
+  border-color: var(--ink);
+  background: rgba(14, 14, 14, .32);
   z-index: 3;
 }
 
-/* 框角上的序号。倒着挂在框的左上方外侧 —— 框本身可能只有 5px 高，
+/* 框角上的序号。倒着挂在框左上方外侧 —— 框本身可能只有 5px 高，
    放在框内会盖住文字且看不清。 */
 .hit-num {
   position: absolute;
   left: -7px;
   top: -7px;
-  min-width: 12px;
-  height: 12px;
-  padding: 0 2px;
-  border-radius: 6px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: var(--r-full);
   background: #FF5C33;
   color: #fff;
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 600;
-  line-height: 12px;
+  line-height: 13px;
   text-align: center;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
 }
 
 .detail-name {
-  font-size: var(--fs-md);
-  font-weight: 500;
+  font-size: var(--fs-15);
+  font-weight: 600;
+  letter-spacing: -.01em;
   word-break: break-all;
-  line-height: 1.45;
-  margin-bottom: 3px;
+  line-height: 1.4;
+  padding: 0 6px;
 }
 
 .detail-path {
-  font-size: 10.5px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
   word-break: break-all;
   line-height: 1.5;
-  margin-bottom: 12px;
+  margin-top: 5px;
+  margin-bottom: 6px;
+  padding: 0 6px;
 }
 
 .sect {
-  padding-top: 12px;
-  margin-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.sect:first-of-type {
-  border-top: none;
-  margin-top: 0;
-  padding-top: 0;
+  padding: 0 6px;
+  margin-top: 15px;
 }
 
 .sect-title {
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  color: var(--text-2);
-  letter-spacing: .4px;
-  margin-bottom: 7px;
+  font-size: var(--fs-11);
+  font-weight: 600;
+  color: var(--ink-40);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 9px;
 }
 
 .kv {
   display: flex;
-  gap: 10px;
-  font-size: var(--fs-sm);
-  line-height: 1.75;
+  align-items: baseline;
+  gap: 12px;
+  font-size: var(--fs-12);
+  padding: 4px 0;
 }
 
 .kv-k {
-  color: var(--text-3);
+  color: var(--ink-40);
   flex: none;
-  width: 62px;
+  width: 58px;
 }
 
 .kv-v {
-  color: var(--text);
+  color: var(--ink-80);
   flex: 1;
   word-break: break-all;
   font-variant-numeric: tabular-nums;
@@ -1495,28 +1682,26 @@
 .reason {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--fs-sm);
-  color: var(--accent);
-  line-height: 1.8;
+  gap: 7px;
+  font-size: var(--fs-12);
+  color: var(--ink-80);
+  line-height: 1.7;
+  padding: 2px 0;
 }
 
 .reason::before {
   content: "";
   width: 4px;
   height: 4px;
-  border-radius: 50%;
-  background: var(--accent-line);
+  border-radius: var(--r-full);
+  background: var(--ink);
   flex: none;
 }
 
-.reason.weak {
-  color: var(--amber);
-}
+/* 弱匹配：整体降一档，但结构不变 */
+.reason.weak { color: var(--ink-40); }
 
-.reason.weak::before {
-  background: var(--amber);
-}
+.reason.weak::before { background: var(--ink-25); }
 
 /* ---- 自绘按钮 ---- */
 
@@ -1525,89 +1710,89 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 11px;
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  background: var(--bg-sunken);
-  color: var(--text);
-  transition: background-color .12s;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--ink-80);
+  transition: background-color .16s, color .16s, box-shadow .16s;
   user-select: none;
   white-space: nowrap;
+  font-family: inherit;
 }
 
 .btn:hover {
-  background: var(--bg-hover);
+  background: var(--surface-3);
+  color: var(--ink);
 }
 
-.btn:active {
-  background: var(--line);
-}
+.btn:active { background: var(--surface-4); }
 
+/* 主动作：反白实心黑。整个界面只有这一个是实心黑按钮，
+   这样「下一步该点哪」不用想。 */
 .btn.primary {
-  background: var(--accent);
+  background: var(--ink);
   color: #fff;
 }
 
-.btn.primary:hover {
-  background: #28604F;
-}
+.btn.primary:hover { background: #2A2A2A; }
 
 .btn.ghost {
-  background: none;
-  border: 1px solid var(--line-input);
-  color: var(--text-2);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--ink-80);
 }
 
 .btn.ghost:hover {
-  border-color: var(--text-3);
-  color: var(--text);
-  background: none;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+  color: var(--ink);
 }
 
-.btn.block {
-  width: 100%;
-}
+.btn.block { width: 100%; }
 
 .btn.sm {
-  height: 24px;
-  padding: 0 8px;
-  font-size: 10.5px;
+  height: 30px;
+  padding: 0 11px;
+  font-size: var(--fs-11);
 }
 
 .btn-row {
   display: flex;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 0 6px;
 }
+
+.btn-row .btn { flex: 1; }
 
 /* ---- 同组文件 ---- */
 
 .group-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 6px;
+  gap: 9px;
+  padding: 7px;
+  margin: 0 -7px;
   border-radius: var(--r-sm);
   cursor: pointer;
   user-select: none;
+  transition: background-color .14s;
 }
 
-.group-item:hover {
-  background: var(--bg-hover);
-}
+.group-item:hover { background: var(--surface-2); }
 
-.group-item.on {
-  background: var(--accent-soft);
-}
+.group-item.on { background: var(--surface-3); }
 
 .group-item img {
-  width: 28px;
-  height: 28px;
-  border-radius: 3px;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
   object-fit: cover;
   flex: none;
-  background: var(--bg-sunken);
+  background: var(--surface-3);
 }
 
 .group-item-info {
@@ -1616,15 +1801,16 @@
 }
 
 .group-item-name {
-  font-size: 11px;
+  font-size: var(--fs-12);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .group-item-tag {
-  font-size: 9.5px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
 }
 
 /* ============ 弹层 ============ */
@@ -1632,21 +1818,19 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(31, 30, 28, .28);
+  background: rgba(14, 14, 14, .30);
   display: none;
   align-items: center;
   justify-content: center;
   z-index: 200;
 }
 
-.overlay.open {
-  display: flex;
-}
+.overlay.open { display: flex; }
 
 .modal {
-  background: var(--bg);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-pop);
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-4);
   width: 460px;
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 80px);
@@ -1656,45 +1840,43 @@
 }
 
 .modal-head {
-  padding: 15px 18px 11px;
-  border-bottom: 1px solid var(--line);
+  padding: 20px 22px 14px;
 }
 
 .modal-title {
-  font-size: var(--fs-lg);
-  font-weight: 500;
+  font-size: var(--fs-17);
+  font-weight: 600;
+  letter-spacing: -.01em;
 }
 
 .modal-desc {
-  font-size: var(--fs-sm);
-  color: var(--text-3);
-  margin-top: 3px;
-  line-height: 1.6;
+  font-size: var(--fs-12);
+  color: var(--ink-60);
+  margin-top: 5px;
+  line-height: 1.65;
 }
 
 .modal-body {
-  padding: 14px 18px;
+  padding: 4px 22px 18px;
   overflow-y: auto;
   min-height: 0;
 }
 
 .modal-foot {
-  padding: 11px 18px 15px;
+  padding: 14px 22px 20px;
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  border-top: 1px solid var(--line);
 }
 
-/* 自绘 tooltip */
-
+/* 自绘 tooltip：替代原生 title 气泡 */
 #tip {
   position: fixed;
-  background: var(--text);
+  background: var(--ink);
   color: #fff;
-  font-size: 10.5px;
-  padding: 4px 7px;
-  border-radius: var(--r-sm);
+  font-size: var(--fs-11);
+  padding: 5px 9px;
+  border-radius: var(--r-xs);
   pointer-events: none;
   opacity: 0;
   transition: opacity .1s;
@@ -1702,20 +1884,17 @@
   max-width: 340px;
   line-height: 1.5;
   word-break: break-all;
+  box-shadow: var(--sh-2);
 }
 
-#tip.on {
-  opacity: 1;
-}
+#tip.on { opacity: 1; }
 
 /* 拖放遮罩 */
-
 #dropmask {
   position: fixed;
   inset: 0;
-  background: rgba(47, 110, 94, .07);
-  border: 2px dashed var(--accent);
-  border-radius: var(--r-lg);
+  background: rgba(242, 242, 242, .82);
+  backdrop-filter: blur(2px);
   display: none;
   align-items: center;
   justify-content: center;
@@ -1723,46 +1902,48 @@
   pointer-events: none;
 }
 
-#dropmask.on {
-  display: flex;
-}
+#dropmask.on { display: flex; }
 
 .dropmask-inner {
-  background: var(--bg);
-  padding: 16px 26px;
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-pop);
-  font-size: var(--fs-lg);
-  color: var(--accent);
+  background: var(--surface);
+  padding: 20px 32px;
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-4);
+  font-size: var(--fs-15);
+  font-weight: 500;
+  color: var(--ink);
+  /* 虚线框放在内层：外层做整屏压暗，内层做落点提示 */
+  box-shadow: var(--sh-4), inset 0 0 0 2px var(--ink-25);
 }
 
 /* 进度条 */
-
 .progress {
-  height: 3px;
-  background: var(--line);
-  border-radius: 2px;
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: var(--r-full);
   overflow: hidden;
 }
 
 .progress-bar {
   height: 100%;
-  background: var(--accent);
+  border-radius: var(--r-full);
+  background: var(--ink);
   transition: width .2s;
 }
 
 /* 骨架屏 */
-
 .skeleton {
-  background: linear-gradient(90deg, var(--bg-sunken) 0%,
-              var(--bg-hover) 50%, var(--bg-sunken) 100%);
+  background: linear-gradient(90deg,
+              var(--surface-3) 0%,
+              var(--surface-2) 50%,
+              var(--surface-3) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.3s linear infinite;
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
+  0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
@@ -1793,23 +1974,21 @@
 
 .dir-path {
   flex: 1;
-  height: 28px;
-  border: 1px solid var(--line-input);
+  height: 34px;
   border-radius: var(--r-sm);
   display: flex;
   align-items: center;
-  padding: 0 9px;
-  font-size: var(--fs-sm);
-  background: var(--bg);
+  padding: 0 12px;
+  font-size: var(--fs-12);
+  background: var(--surface-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  color: var(--ink);
 }
 
-.dir-path.empty {
-  color: var(--text-3);
-}
+.dir-path.empty { color: var(--ink-40); }
 
 .dir-list {
   display: flex;
@@ -1817,18 +1996,19 @@
   gap: 5px;
   max-height: 168px;
   overflow-y: auto;
-  margin-top: 7px;
+  margin-top: 8px;
 }
 
 .dir-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 28px;
-  padding: 0 9px;
+  height: 32px;
+  padding: 0 12px;
   border-radius: var(--r-sm);
-  background: var(--bg-sunken);
-  font-size: var(--fs-sm);
+  background: var(--surface-2);
+  font-size: var(--fs-12);
+  color: var(--ink-80);
 }
 
 .dir-item-name {
@@ -1841,17 +2021,18 @@
 }
 
 .dir-item-del {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-full);
   display: grid;
   place-items: center;
-  color: var(--text-3);
+  color: var(--ink-40);
   flex: none;
+  transition: background-color .14s, color .14s;
 }
 
 .dir-item-del:hover {
-  background: var(--line);
+  background: var(--surface-4);
   color: var(--warn);
 }
 
@@ -1868,8 +2049,8 @@
 
 .browser-path {
   flex: 1;
-  font-size: var(--fs-sm);
-  color: var(--text-2);
+  font-size: var(--fs-12);
+  color: var(--ink-60);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1887,32 +2068,35 @@
 .browser-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 29px;
-  padding: 0 9px;
+  gap: 9px;
+  height: 34px;
+  padding: 0 10px;
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-12);
   cursor: pointer;
-  color: var(--text);
+  color: var(--ink-80);
+  transition: background-color .12s;
 }
 
 .browser-item:hover {
-  background: var(--bg-hover);
+  background: var(--surface-2);
+  color: var(--ink);
 }
 
 .browser-item svg {
-  color: var(--text-3);
+  color: var(--ink-40);
   flex: none;
 }
 
 .browser-empty {
   padding: 24px 0;
   text-align: center;
-  font-size: var(--fs-sm);
-  color: var(--text-3);
+  font-size: var(--fs-12);
+  color: var(--ink-40);
 }
 
 /* ---- 图中文搜索的范围选择 ---- */
+
 .ocr-drives {
   display: flex;
   flex-direction: column;
@@ -1923,10 +2107,9 @@
 }
 
 .ocr-drive {
-  border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: var(--bg-panel);
-  padding: 9px 11px;
+  background: var(--surface-2);
+  padding: 12px 14px;
   text-align: left;
 }
 
@@ -1934,23 +2117,24 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 7px;
+  margin-bottom: 9px;
 }
 
 .ocr-drive-name {
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink);
 }
 
 .ocr-drive-meta {
-  font-size: 10.5px;
-  color: var(--text-3);
+  font-size: var(--fs-11);
+  color: var(--ink-40);
 }
 
 .ocr-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
 }
 
 /* 自绘的复选标签：不用原生 checkbox —— 原生控件在深浅主题下样式
@@ -1958,76 +2142,76 @@
 .ocr-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 11px;
-  border: 1px solid var(--line-input);
-  background: var(--bg);
-  font-size: 10.5px;
-  color: var(--text-2);
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  font-size: var(--fs-11);
+  color: var(--ink-60);
   cursor: default;
   user-select: none;
-  transition: background .12s, border-color .12s, color .12s;
+  transition: background-color .14s, color .14s;
+  box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
 .ocr-chip em {
   font-style: normal;
-  color: var(--text-3);
-  font-size: 10px;
+  color: var(--ink-40);
+  font-size: var(--fs-11);
 }
 
 .ocr-chip.on {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--text);
+  background: var(--ink);
+  color: #fff;
+  box-shadow: none;
 }
 
-.ocr-chip.on em {
-  color: var(--accent);
-}
+.ocr-chip.on em { color: rgba(255, 255, 255, .62); }
 
 /* 卡片上把命中的文字片段描出来。文字搜索的结果光看图看不出为什么
-   命中，标一下让人一眼确认对不对 */
+   命中，标一下让人一眼确认对不对。 */
 .hit-hl {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-radius: 2px;
-  padding: 0 1px;
+  background: var(--surface-3);
+  color: var(--ink);
+  font-weight: 600;
+  border-radius: 3px;
+  padding: 0 2px;
 }
 
 /* ---- 详情面板里的命中文字列表 ---- */
 
 .hit-text {
-  font-size: 10.5px;
+  font-size: var(--fs-11);
   line-height: 1.65;
-  color: var(--text-2);
-  padding: 4px 7px;
-  margin-top: 4px;
+  color: var(--ink-80);
+  padding: 5px 8px;
+  margin-top: 5px;
   border-radius: var(--r-sm);
-  background: var(--bg-sunken);
+  background: var(--surface-2);
   word-break: break-all;
 }
 
 .hit-text mark {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--surface-4);
+  color: var(--ink);
   font-weight: 600;
-  border-radius: 2px;
+  border-radius: 3px;
   padding: 0 2px;
 }
 
 /* 列表项左侧的序号，和图上框的序号对应 */
 .hit-no {
   display: inline-block;
-  min-width: 12px;
-  height: 12px;
+  min-width: 13px;
+  height: 13px;
   margin-right: 5px;
-  border-radius: 6px;
-  background: var(--accent);
+  border-radius: var(--r-full);
+  background: #FF5C33;
   color: #fff;
-  font-size: 8.5px;
-  line-height: 12px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 13px;
   text-align: center;
   vertical-align: 1px;
 }
@@ -2038,29 +2222,28 @@
   width: auto;
   max-width: calc(100vw - 60px);
   max-height: calc(100vh - 60px);
-  background: var(--bg-panel);
+  background: var(--surface);
 }
 
 .big-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 12px 16px;
   flex: none;
 }
 
 .big-name {
   flex: 1;
-  font-size: var(--fs-sm);
-  color: var(--text-2);
+  font-size: var(--fs-12);
+  color: var(--ink-60);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .big-body {
-  padding: 14px;
+  padding: 0 16px 16px;
   overflow: auto;
   display: flex;
   justify-content: center;
@@ -2074,6 +2257,7 @@
   width: auto;
   height: auto;
   display: block;
+  border-radius: var(--r-md);
 }
 
 /* 竖版长海报（高宽比 > 1.25）：按宽度撑开、纵向滚动。
@@ -2084,9 +2268,7 @@
   width: auto;
 }
 
-.modal.big.tall .big-body {
-  align-items: flex-start;
-}
+.modal.big.tall .big-body { align-items: flex-start; }
 
 /* 大图里框可以画得更细更准 —— 这时候图放大了，1px 边框不会糊 */
 .big-body .hit-box {
@@ -2095,15 +2277,14 @@
   border-width: 1.5px;
 }
 
-.big-body .hit-box.first {
-  border-width: 2.5px;
-}
+.big-body .hit-box.first { border-width: 2.5px; }
 
 /* ---- 顶栏「文字索引」入口 ---- */
 
 .ocr-entry {
   position: relative;
   gap: 5px;
+  flex: none;
 }
 
 /* 有待办或正在跑时亮一个点。不用颜色区分状态（红/黄的意义要额外
@@ -2111,19 +2292,19 @@
 .ocr-entry-dot {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
-  background: var(--amber);
+  border-radius: var(--r-full);
+  background: var(--ink-40);
   flex: none;
 }
 
 .ocr-entry.busy .ocr-entry-dot {
-  background: var(--accent);
+  background: var(--ink);
   animation: ocr-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes ocr-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: .3; }
+  50%      { opacity: .3; }
 }
 
 /* 范围页的说明文字不要拉满整行 —— 这段文字行长超过 60 个中文字符
@@ -2139,11 +2320,143 @@
    而且默认没有背景色，和正文混在一起。 */
 .empty-desc code,
 .empty code {
-  font-family: var(--font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
-  font-size: 0.94em;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: var(--bg-sunken);
-  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: .94em;
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  background: var(--surface-3);
+  color: var(--ink-80);
   white-space: nowrap;
+}
+
+
+/* ============================================================
+   窄窗口适配
+   1440 是设计基准。窗口更窄时不改布局结构，只做三件事：
+   收紧侧栏/详情宽度、允许状态文字省略、降低卡片最小宽度。
+   ============================================================ */
+
+@media (max-width: 1320px) {
+  #app {
+    --w-side: 240px;
+    --w-detail: 320px;
+  }
+  /* 搜索框宽度交给 .searchbox 自己的 flex 规则。
+     这里原来写的是 `width: 280px` —— 那是搜索框还是固定宽度、
+     拖图区还占顶栏独立一格时的遗留值。现在 flex:1 1 auto 会以
+     flex-basis:auto 取这个 width 当基准，等于在窄屏把弹性伸展
+     关掉了，实测 1000px 时搜索框只有 332px（本该 380+）。
+     只调下限，不锁宽度。 */
+  .searchbox { min-width: 200px; }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 1160px) {
+  #app {
+    --w-side: 216px;
+    --w-detail: 300px;
+  }
+  .searchbox { min-width: 180px; }
+  /* 状态文字在这一档最容易被挤掉。它只是提示，不是操作对象，
+     允许省略号收尾，不要为它牺牲搜索框宽度。 */
+  .status {
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .status #status-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .brand-sub { display: none; }
+}
+
+/* ---- 右键菜单失效提示 ----
+   这是「出了问题才出现」的一块，不是常驻 UI。
+   用浅红底把它从正常项里区分出来：用户平时不看设置页，
+   一旦看到就得知道这不是正常状态。 */
+.shell-stale {
+  margin-top: 10px;
+  padding: 11px 13px;
+  border-radius: var(--r-sm);
+  background: var(--warn-soft);
+}
+
+.shell-stale-t {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  color: var(--warn);
+  margin-bottom: 4px;
+}
+
+.shell-stale-d {
+  font-size: var(--fs-11);
+  line-height: 1.65;
+  color: var(--ink-60);
+  margin-bottom: 9px;
+}
+
+.shell-stale .btn {
+  /* 修复按钮是这块唯一的操作，给足点击面积 */
+  min-width: 88px;
+}
+
+/* ---- 格式分组的「+N 种」折叠按钮 ----
+   它不是筛选项，是分组的展开开关，所以用虚线边 + 更浅的字，
+   和实心的格式芯片区分开，避免被误认为又一种格式。 */
+.chip-more {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--ink-40);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.chip-more:hover {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+  color: var(--ink-60);
+}
+
+/* ---- 主区标题栏的窄屏收缩 ----
+   详情面板展开后主区只剩 530px（1100 窗口），标题栏里塞着
+   「全部文件 + 计数 + 文字索引 + 网格/列表 + 排序」五样东西，
+   实测总共要 570px，放不下。
+
+   取舍顺序（按重要性）：
+     1. 文字索引 --- 只在图中文/画面模式下有意义，其余时候藏起来
+     2. 排序器 --- 收成纯图标（只留箭头），仍可点
+     3. 计数 --- 已经允许省略号，不用管
+   标题本身永远不让位。 */
+@media (max-width: 1240px) {
+  .main-head { gap: 8px; }
+  .main-tools { gap: 6px; }
+  /* 窄屏时文字索引按钮只留图标，文字与圆点都藏起来。
+     图标本身就是「一张带文字的方块」，语义还在。 */
+  .ocr-entry span { display: none; }
+  .ocr-entry { padding: 0 9px; }
+}
+
+@media (max-width: 1120px) {
+  /* 再窄一档：计数胶囊让位。它是信息不是操作，
+     而且标题下面每张卡片都写着同样的数字，这里少显示不损失判断。 */
+  .main-count { display: none; }
+}
+
+/* ---- 窄窗口下的顶栏收缩 ----
+   顶栏原有 9 个元素（品牌 / 搜索框 / 拖图区 / 模式切换 / 文字索引
+   / 更新索引 / 设置 / 状态）。把拖图并进搜索框、文字索引移到主区
+   之后剩 6 个，1000px 窗口也不再溢出。
+
+   再窄时只收搜索框，别的都不动 —— 模式切换和状态是常用信息，
+   藏起来会让用户不知道当前在哪个模式。 */
+@media (max-width: 940px) {
+  .searchbox { min-width: 160px; }
+  .dz-chip-idle span:last-child { display: none; }  /* 只留图标 */
+  .dz-chip { max-width: 34px; padding: 0 11px; }
+  .dz-chip.has-image { max-width: 40%; padding: 0 4px; }
 }

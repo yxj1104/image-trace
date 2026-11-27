@@ -239,6 +239,50 @@ def uninstall():
     return n
 
 
+def _registered_exe():
+    """从注册表读回当前实际写着的 exe 路径（不是本进程的路径）。
+
+    为什么不能直接用 sys.executable：右键菜单是**之前某次运行**写进
+    注册表的，可能指向另一个位置。典型事故是打包产物目录被删了
+    （PyInstaller 每次重建都会先删 dist/），注册表里的菜单项还在，
+    但指向的 exe 已经不存在 —— 右键点了没反应，而且没有任何提示。
+
+    返回 None 表示读不到（没注册 / 键结构异常）。
+    """
+    import re
+    paths = (
+        rf'Software\Classes\SystemFileAssociations\.png\shell\{APP_KEY}\command',
+        rf'Software\Classes\Directory\shell\{APP_KEY}\command',
+        rf'Software\Classes\Drive\shell\{APP_KEY}\command',
+    )
+    for p in paths:
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, p) as k:
+                cmd = winreg.QueryValueEx(k, '')[0]
+        except OSError:
+            continue
+        m = re.search(r'"([^"]+\.exe)"', cmd)
+        if m:
+            return m.group(1)
+        # 非 exe 形式（源码运行的 python.exe + app.py），取第一段
+        m = re.search(r'"([^"]+)"', cmd)
+        if m:
+            return m.group(1)
+    return None
+
+
+def _stale():
+    """注册项存在，但它指向的可执行文件已经不在了。
+
+    这种情况「已注册」和「能用了」是两件事，界面必须分开显示 ——
+    否则用户看到开关是开的，右键却是死的。
+    """
+    exe = _registered_exe()
+    if not exe:
+        return False
+    return not os.path.exists(exe)
+
+
 def status():
     """检查当前注册状态，供界面显示。"""
     if not is_windows():
@@ -252,6 +296,9 @@ def status():
             return False
 
     file_hits = _status_files()
+    registered = _registered_exe()
+    # 源码运行时也要检查：app.py 被移走/重命名，同样会让菜单失效
+    stale = bool(registered) and not os.path.exists(registered)
     return {
         'supported': True,
         'admin': is_admin(),
@@ -260,10 +307,26 @@ def status():
         'dir_bg': exists(
             rf'Software\Classes\Directory\Background\shell\{APP_KEY}'),
         'drive': exists(rf'Software\Classes\Drive\shell\{APP_KEY}'),
+        # enabled 只表示「注册表里有」，不代表能点得动
         'enabled': bool(file_hits) or exists(
             rf'Software\Classes\Drive\shell\{APP_KEY}'),
+        # stale 表示「有，但指向的目标不见了」—— 界面据此显示修复入口
+        'stale': stale,
+        'registered': registered,
+        # expected 只用于界面展示「现在会指向哪里」，去掉命令里多余的分段
+        'expected': _exe_path().split('" "')[0].strip('"'),
         'command': _command('file'),
     }
+
+
+def repair():
+    """重新写一遍注册项，把命令指向当前这个可执行文件。
+
+    场景：换了安装位置、重新打包换了目录、或旧产物被删。
+    不需要先 uninstall —— install 会把同名键的值覆盖掉。
+    """
+    return install()
+
 
 
 if __name__ == '__main__':
